@@ -4,57 +4,10 @@
 #include <stdbool.h>
 #include <time.h>
 
-int N = 9;
-int C = 3;
-char** sudoku = NULL;
+#include "example_sudokus.h"
 
-#define very_hard_sudoku \
-    sudoku = create_empty_sudoku(); \
-    sudoku[0] = (char[]) { 0,2,6, 0,0,0, 0,0,3 }; \
-    sudoku[1] = (char[]) { 0,0,0, 0,0,0, 0,0,0 }; \
-    sudoku[2] = (char[]) { 7,0,0, 0,4,8, 0,6,0 }; \
-    sudoku[3] = (char[]) { 0,7,0, 0,0,1, 0,0,0 }; \
-    sudoku[4] = (char[]) { 0,4,0, 2,0,5, 0,0,9 }; \
-    sudoku[5] = (char[]) { 2,0,0, 0,8,0, 0,5,7 }; \
-    sudoku[6] = (char[]) { 5,0,8, 0,0,0, 0,0,0 }; \
-    sudoku[7] = (char[]) { 0,0,0, 0,0,0, 0,2,0 }; \
-    sudoku[8] = (char[]) { 0,0,0, 0,1,0, 5,4,0 };
-
-#define hard_sudoku \
-    sudoku = create_empty_sudoku(); \
-    sudoku[0] = (char[]) { 5,3,0, 0,7,0, 0,0,0 }; \
-    sudoku[1] = (char[]) { 6,0,0, 1,9,5, 0,0,0 }; \
-    sudoku[2] = (char[]) { 0,9,8, 0,0,0, 0,6,0 }; \
-    sudoku[3] = (char[]) { 8,0,0, 0,6,0, 0,0,3 }; \
-    sudoku[4] = (char[]) { 4,0,0, 8,0,3, 0,0,1 }; \
-    sudoku[5] = (char[]) { 7,0,0, 0,2,0, 0,0,6 }; \
-    sudoku[6] = (char[]) { 0,6,0, 0,0,0, 2,8,0 }; \
-    sudoku[7] = (char[]) { 0,0,0, 4,0,9, 0,0,5 }; \
-    sudoku[8] = (char[]) { 0,0,0, 0,0,0, 0,7,9 };
-
-#define medium_sudoku \
-    sudoku = create_empty_sudoku(); \
-    sudoku[0] = (char[]) { 5,3,4, 6,0,8, 9,1,2 }; \
-    sudoku[1] = (char[]) { 6,0,0, 0,9,5, 3,0,0 }; \
-    sudoku[2] = (char[]) { 0,0,8, 0,4,0, 5,6,7 }; \
-    sudoku[3] = (char[]) { 0,0,0, 0,6,0, 0,0,3 }; \
-    sudoku[4] = (char[]) { 4,0,0, 8,0,3, 0,0,1 }; \
-    sudoku[5] = (char[]) { 7,0,0, 0,2,0, 8,0,6 }; \
-    sudoku[6] = (char[]) { 9,6,1, 0,0,0, 2,8,0 }; \
-    sudoku[7] = (char[]) { 0,8,0, 4,0,9, 6,0,5 }; \
-    sudoku[8] = (char[]) { 3,0,0, 0,8,0, 1,7,9 };
-
-#define easy_sudoku \
-    sudoku = create_empty_sudoku(); \
-    sudoku[0] = (char[]) { 5,3,4, 6,0,8, 0,1,2 }; \
-    sudoku[1] = (char[]) { 0,7,0, 1,0,5, 0,4,0 }; \
-    sudoku[2] = (char[]) { 1,9,8, 0,4,0, 5,6,0 }; \
-    sudoku[3] = (char[]) { 8,0,0, 0,6,0, 4,0,3 }; \
-    sudoku[4] = (char[]) { 4,0,0, 8,0,3, 7,0,1 }; \
-    sudoku[5] = (char[]) { 7,0,3, 0,2,4, 8,0,0 }; \
-    sudoku[6] = (char[]) { 9,6,1, 0,0,0, 2,0,0 }; \
-    sudoku[7] = (char[]) { 2,8,7, 4,1,9, 6,3,5 }; \
-    sudoku[8] = (char[]) { 3,0,0, 0,8,0, 1,7,9 };
+#define N 9
+#define C 3
 
 char** create_empty_sudoku()
 {
@@ -182,13 +135,13 @@ bool is_solvable(char** s)
     return true;
 }
 
-void measure_solver() 
+void measure_solver(char** s) 
 {
     clock_t start, end;
     double cpu_time_used;
 
     start = clock();
-    int solutions = all_solutions(sudoku);
+    int solutions = all_solutions(s);
     end = clock();
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
     printf("found %d solutions in %.2fs\n", solutions, cpu_time_used);
@@ -218,6 +171,7 @@ int pseudorandom(int n)
     return rand() % n;
 }
 
+
 int main() 
 {
     srand(time(NULL));
@@ -227,7 +181,7 @@ int main()
     int attempts = 0;
     while (attempts < 10) {
         attempts++;
-        s = create_sudoku(pseudorandom, 20);
+        s = create_sudoku(pseudorandom, 17);
         printf("checking if solvable..\n");
         for (int i=0; i<N; i++) {
             for (int j=0; j<N; j++) {
@@ -239,31 +193,28 @@ int main()
     }
     print_sudoku(s);
     print_sudoku(solved);
-    
+
     /*
     easy_sudoku
     printf("--easy--\n");
     measure_solver(sudoku);
     
-    print_sudoku(sudoku);
-    
     medium_sudoku
     printf("--medium--\n");
     measure_solver(sudoku);
-    
-    print_sudoku(sudoku);
-
+ 
     hard_sudoku
     printf("--hard--\n");
     measure_solver(sudoku);
     
-    print_sudoku(sudoku);
-    
     very_hard_sudoku
     printf("--very hard--\n");
     measure_solver(sudoku);
-    
-    print_sudoku(sudoku);
-*/
+
+    non_proper_sudoku
+    printf("--non proper--\n");
+    measure_solver(sudoku);
+    */
+ 
     return 0;
 }
