@@ -1,2 +1,2 @@
-sudoku: sudoku.c sudoku.h
-	cc -o sudoku sudoku.c
+sudoku: sudoku.c sudoku.h exact_cover.h
+	cc -o sudoku sudoku.c -Wall

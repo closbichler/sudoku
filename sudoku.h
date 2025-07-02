@@ -11,14 +11,17 @@ typedef struct {
 
 Sudoku sudoku_create_empty(int size, int block_size);
 Sudoku sudoku_create(int size, int block_size, int (rand)(int n), int hints);
-void sudoku_print(Sudoku s);
-bool sudoku_is_valid(Sudoku s);
-bool sudoku_is_solvable(Sudoku s);
-int sudoku_get_solutions(Sudoku s);
+Sudoku sudoku_clone(Sudoku s);
+void   sudoku_print(Sudoku s);
+bool   sudoku_is_valid(Sudoku s);
+bool   sudoku_is_solvable(Sudoku s);
+int    sudoku_get_solutions(Sudoku s);
 
 #endif // SUDOKU_H
 
 #ifdef SUDOKU_IMPLEMENTATION
+#ifndef SUDOKU_IMPLEMENTED
+#define SUDOKU_IMPLEMENTED
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,8 +50,39 @@ Sudoku sudoku_create_empty(int size, int block_size)
     return s;
 }
 
+Sudoku sudoku_create(int size, int block_size, int (rand)(int n), int hints) 
+{
+    Sudoku s = sudoku_create_empty(size, block_size);
+    while (hints > 0) {
+        int x = rand(s.size);       
+        int y = rand(s.size);
+        char val = rand(s.size) + 1;
+        if (s.field[x][y] == 0) {
+            s.field[x][y] = val;
+            if (!sudoku_is_valid(s)) {
+                s.field[x][y] = 0;
+            } else {
+                hints--;
+            }
+        }
+    }
+    return s;
+}
+
+Sudoku sudoku_clone(Sudoku s)
+{
+    Sudoku c = sudoku_create_empty(s.size, s.block_size);
+    for (int i=0; i<s.size; i++) {
+        for (int j=0; j<s.size; j++) {
+            c.field[i][j] = s.field[i][j];
+        }
+    }
+    return c;
+}
+
 void sudoku_print(Sudoku s)
 {
+    printf("Sudoku %dx%d with block-size %d\n", s.size, s.size, s.block_size);
     for (int i=0; i<s.size; i++) {
         if (i % s.block_size == 0) {
             printf("|");
@@ -116,10 +150,7 @@ bool sudoku_is_valid(Sudoku s)
 
 int sudoku_get_solutions(Sudoku s) 
 {
-    if (!sudoku_is_valid(s)) {
-        return 0;
-    }
-
+    if (!sudoku_is_valid(s)) return 0;
     int solutions = 0;
     for (int i=0; i<s.size; i++) {
         for (int j=0; j<s.size; j++) {
@@ -138,18 +169,13 @@ int sudoku_get_solutions(Sudoku s)
 
 bool sudoku_is_solvable(Sudoku s) 
 {
-    if (!sudoku_is_valid(s)) {
-        return false;
-    }
-
+    if (!sudoku_is_valid(s)) return false;
     for (int i=0; i<s.size; i++) {
         for (int j=0; j<s.size; j++) {
             if (s.field[i][j] == 0) {
                 for (int d=1; d<=s.size; d++) {
                     s.field[i][j] = d;
-                    if (sudoku_is_solvable(s)) {
-                        return true;
-                    }
+                    if (sudoku_is_solvable(s)) return true;
                     s.field[i][j] = 0;
                 }
                 return false;
@@ -159,23 +185,5 @@ bool sudoku_is_solvable(Sudoku s)
     return true;
 }
 
-Sudoku sudoku_create(int size, int block_size, int (rand)(int n), int hints) 
-{
-    Sudoku s = sudoku_create_empty(size, block_size);
-    while (hints > 0) {
-        int x = rand(s.size);       
-        int y = rand(s.size);
-        char val = rand(s.size) + 1;
-        if (s.field[x][y] == 0) {
-            s.field[x][y] = val;
-            if (!sudoku_is_valid(s)) {
-                s.field[x][y] = 0;
-            } else {
-                hints--;
-            }
-        }
-    }
-    return s;
-}
-
+#endif // SUDOKU_IMPLEMENTED
 #endif // SUDOKU_IMPLEMENTATION
