@@ -1,6 +1,11 @@
 #ifndef EXACT_COVER
 #define EXACT_COVER
 
+#include <stdbool.h>
+#include <stdlib.h>
+
+#include "sudoku.h"
+
 typedef struct {
     int id;
     int *items;
@@ -25,10 +30,10 @@ int  exact_cover_solutions(Matrix *sets, Cover *cover);
 void exact_cover_example();
 void exact_cover_print_sets(Matrix sets, Cover cover);
 bool exact_cover_delete_set_by_id(Matrix *sets, int id);
-bool exact_cover_delete_possibility_from_sets(Matrix* sets, int set_id);
-void exact_cover_clone_matrix(Matrix* sets, Matrix to_clone);
+bool exact_cover_delete_possibility_from_sets(Matrix *sets, int set_id);
+void exact_cover_clone_matrix(Matrix *sets, Matrix to_clone);
 
-bool   exact_cover_solve_sudoku(Sudoku* s);
+bool   exact_cover_solve_sudoku(Sudoku *s);
 int    exact_cover_sudoku_solutions(Sudoku s);
 Matrix exact_cover_create_sudoku_constraint_sets(int size, int block_size);
 

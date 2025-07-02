@@ -80,5 +80,4 @@ int main()
     measure_solvers(s);
     
     return 0;
-
 }
