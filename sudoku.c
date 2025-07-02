@@ -19,13 +19,11 @@ void measure_solvers(Sudoku s)
     double cpu_time_used;
 
     printf("Exact-cover: ");
-    Sudoku s_mut = sudoku_clone(s);
     start = clock();
-    int solutions = exact_cover_solve_sudoku(&s_mut);
+    int solutions = exact_cover_sudoku_solutions(s);
     end = clock();
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
     printf("found %d solutions in %.2fs\n", solutions, cpu_time_used);
-    
     
     printf("Brute-force: ");
     start = clock();
@@ -39,7 +37,7 @@ int main()
 {
     srand(time(NULL));
 
-
+/*
     Sudoku s = {0}, solved = {0};
     int attempts = 0;
     while (attempts < 10) {
@@ -57,8 +55,8 @@ int main()
     }
     sudoku_print(s);
     sudoku_print(solved);
+*/
 
-/*
     Sudoku s = {0};
     printf("--easy--\n");
     sudoku_example_easy(&s);
@@ -71,16 +69,16 @@ int main()
     printf("--hard--\n");
     sudoku_example_hard(&s);
     measure_solvers(s);
-    
-    printf("--very hard--\n");
+
+    /*printf("--very hard--\n");
     sudoku_example_very_hard(&s);
     measure_solvers(s);
     sudoku_print(s);
-    
+    */
     printf("--non proper--\n");
     sudoku_example_non_proper(&s);
     measure_solvers(s);
     
     return 0;
-*/
+
 }

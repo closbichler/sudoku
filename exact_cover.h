@@ -20,14 +20,16 @@ typedef struct {
     size_t capacity;
 } Cover;
 
-bool exact_cover(Matrix *sets, Cover *cover);
+bool exact_cover_is_solvable(Matrix *sets, Cover *cover);
+int  exact_cover_solutions(Matrix *sets, Cover *cover);
 void exact_cover_example();
 void exact_cover_print_sets(Matrix sets, Cover cover);
 bool exact_cover_delete_set_by_id(Matrix *sets, int id);
 bool exact_cover_delete_possibility_from_sets(Matrix* sets, int set_id);
 void exact_cover_clone_matrix(Matrix* sets, Matrix to_clone);
 
-int    exact_cover_solve_sudoku(Sudoku* s);
+bool   exact_cover_solve_sudoku(Sudoku* s);
+int    exact_cover_sudoku_solutions(Sudoku s);
 Matrix exact_cover_create_sudoku_constraint_sets(int size, int block_size);
 
 #endif // EXACT_COVER
@@ -249,10 +251,9 @@ Matrix exact_cover_create_sudoku_constraint_sets(int size, int block_size)
     return sets;
 }
 
-bool exact_cover(Matrix *sets, Cover *cover)
+bool exact_cover_is_solvable(Matrix *sets, Cover *cover)
 {
-    if (sets->count == 0)
-        return true;
+    if (sets->count == 0) return true;
 
     // choose column with least 1s
     int column = 0, ones = INT_MAX;
@@ -267,8 +268,7 @@ bool exact_cover(Matrix *sets, Cover *cover)
         }
     }
 
-    if (ones == 0) 
-        return false;
+    if (ones == 0) return false;
 
     for (int row = 0; row < sets->items[row].count; row++) {
         if (sets->items[row].items[column] == 1) {
@@ -280,7 +280,7 @@ bool exact_cover(Matrix *sets, Cover *cover)
 
             exact_cover_delete_possibility_from_sets(sets, set_id);
 
-            if (exact_cover(sets, cover))
+            if (exact_cover_is_solvable(sets, cover))
                 return true;
 
             // restore context
@@ -292,7 +292,47 @@ bool exact_cover(Matrix *sets, Cover *cover)
     return false;
 }
 
-int exact_cover_solve_sudoku(Sudoku* s)
+int exact_cover_solutions(Matrix *sets, Cover *cover)
+{
+    if (sets->count == 0) return 1;
+    int solutions = 0;
+
+    // choose column with least 1s
+    int column = 0, ones = INT_MAX;
+    for (int i=0, j=0; i<sets->items[0].count; i++) {
+        int current_ones = 0;
+        for (j=0; j<sets->count; j++) {
+            current_ones += sets->items[j].items[i];
+        }
+        if (current_ones < ones) {
+            column = i;
+            ones = current_ones;
+        }
+    }
+
+    if (ones == 0) return 0;
+
+    for (int row = 0; row < sets->items[row].count; row++) {
+        if (sets->items[row].items[column] == 1) {
+            // save context
+            int set_id = sets->items[row].id;
+            da_append(cover, sets->items[row].id);
+            Matrix old_sets = {0};
+            exact_cover_clone_matrix(&old_sets, *sets);
+
+            exact_cover_delete_possibility_from_sets(sets, set_id);
+            solutions += exact_cover_solutions(sets, cover);
+
+            // restore context
+            exact_cover_clone_matrix(sets, old_sets);
+            da_remove(cover, cover->count-1);
+        }
+    }
+
+    return solutions;
+}
+
+bool exact_cover_solve_sudoku(Sudoku* s)
 {
     Matrix sets = exact_cover_create_sudoku_constraint_sets(s->size, s->block_size);
 
@@ -309,7 +349,8 @@ int exact_cover_solve_sudoku(Sudoku* s)
     exact_cover_clone_matrix(&sets_covered, sets);
     Cover cover = {0};
         
-    if (!exact_cover(&sets_covered, &cover)) return 0;
+    if (!exact_cover_is_solvable(&sets_covered, &cover)) 
+        return false;
         
     for (int i = 0; i < sets.count; i++) {
         bool selected = false;
@@ -332,7 +373,27 @@ int exact_cover_solve_sudoku(Sudoku* s)
         }
     }
 
-    return 1;
+    return true;
+}
+
+int exact_cover_sudoku_solutions(Sudoku s)
+{
+    Matrix sets = exact_cover_create_sudoku_constraint_sets(s.size, s.block_size);
+
+    for (int i=0; i<s.size; i++) {
+        for (int j=0; j<s.size; j++) {
+            int val = s.field[i][j];
+            if (val == 0) continue;
+            int set_id = i * s.size * s.size + j * s.size + val - 1;
+            exact_cover_delete_possibility_from_sets(&sets, set_id);
+        }
+    }
+   
+    Matrix sets_covered = {0};
+    exact_cover_clone_matrix(&sets_covered, sets);
+    Cover cover = {0};
+        
+    return exact_cover_solutions(&sets_covered, &cover);
 }
 
 void exact_cover_example()
@@ -356,7 +417,7 @@ void exact_cover_example()
     Matrix initial_sets = {0};
     exact_cover_clone_matrix(&initial_sets, sets);
     Cover cover = {0};
-    if (!exact_cover(&sets, &cover)) printf("no solution\n");
+    if (!exact_cover_is_solvable(&sets, &cover)) printf("no solution\n");
     exact_cover_print_sets(initial_sets, cover);
 }
 
