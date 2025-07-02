@@ -1,2 +1,10 @@
 # Sudoku creator and solver
-Create and solve sudokus with a simple recursive greedy algorithm.
+Create and solve sudokus with different algorithmic approaches.
+
+The implementation contains one simple recursive greedy algorithm and 
+a reduction from sudoku to the exact cover problem as described by Donald Knuth (also called _Algorithm X_).
+
+## Resources
+- https://en.wikipedia.org/wiki/Exact_cover#Sudoku
+- https://en.wikipedia.org/wiki/Knuth%27s_Algorithm_X
+- https://sudokugarden.de/de/info/minimal
