@@ -453,11 +453,18 @@ void exact_cover_example()
     sets.items[4].items = (int[]) { 0,1,1,0,0,1,1 };
     sets.items[5].items = (int[]) { 0,1,0,0,0,0,1 };
 
-    Matrix initial_sets = {0};
-    exact_cover_clone_matrix(&initial_sets, sets);
+    // sets.items[0].items = (int[]) { 0,1,0,0,1,0,0 };
+    // sets.items[1].items = (int[]) { 0,0,1,0,0,1,0 };
+    // sets.items[2].items = (int[]) { 1,0,0,0,0,0,0 };
+    // sets.items[3].items = (int[]) { 0,0,0,1,1,0,1 };
+    // sets.items[4].items = (int[]) { 0,1,1,0,0,1,0 };
+    // sets.items[5].items = (int[]) { 0,0,0,0,0,0,0 };
+
+    
     Cover cover = {0};
-    if (!exact_cover_is_solvable(&sets, &cover)) printf("no solution\n");
-    exact_cover_print_sets(initial_sets, cover);
+    Column *root = dlx_matrix_to_linked_list(sets);
+    if (!dlx_solve_exact_cover(root, &cover)) printf("no solution\n");
+    exact_cover_print_sets(sets, cover);
 }
 
 
@@ -505,12 +512,13 @@ Column* dlx_matrix_to_linked_list(Matrix matrix)
         c->next = new_col;
         c = new_col;
     }
+
     
     for (int i=0; i<matrix.count; i++) {
         Column *c = root;
         Node *last_node = NULL;
         Node *first_node = NULL;
-        for (int j=0; j<matrix.items[i].count; j++) {
+        for (int j=0; j<matrix.items[i].count; j++) {            
             c = c->next;
             int val = matrix.items[i].items[j];
             if (val == 0) continue;
@@ -539,9 +547,11 @@ Column* dlx_matrix_to_linked_list(Matrix matrix)
             }
             c->len++;
         }
-        last_node->right = first_node;
-        first_node->left = last_node;
-     }
+        if (last_node != NULL && first_node != NULL) {
+            last_node->right = first_node;
+            first_node->left = last_node;
+        }
+    }
 
     return root;
 }
@@ -567,7 +577,7 @@ void dlx_unremove_element_from_col(Node *n)
         n->c->len++;
     } else if (n->up->down == n && n->down->up == n) {
         return;
-    }
+    } 
     n->up->down = n;
     n->down->up = n;
     n->c->len++;
@@ -671,7 +681,7 @@ int dlx_exact_cover_solutions(Column *root, Cover *cover)
     int solutions = 0;
     Node *n = c->head;
     if (n == NULL) {
-        // TODO: theres some bug in the covering and uncovering functions
+        // TODO: there's some bug in the covering and uncovering functions
         printf("no head, but col len = %d\n", min_len);
         return 0;
     }

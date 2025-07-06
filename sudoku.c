@@ -77,29 +77,24 @@ void test_solvers()
 
 int main() 
 {
-    srand(time(NULL));
+    srand(time(0));
 
-/*
-    Sudoku s = {0}, solved = {0};
-    int attempts = 0;
-    while (attempts < 10) {
-        attempts++;
-        printf("attempt %d\n", attempts);
-        s = sudoku_create(9, 3, pseudorandom, 17);
-        solved = sudoku_create_empty(s.size, s.block_size);
-        for (int i=0; i<s.size; i++) {
-            for (int j=0; j<s.size; j++) {
-                solved.field[i][j] = s.field[i][j];
-            }
-        }
-        printf("checking if solvable..\n");
-        if (exact_cover_solve_sudoku(&solved)) break;
-    }
-    sudoku_print(s);
-    sudoku_print(solved);
-*/
+    exact_cover_example();
 
-    test_solvers();
+    // Sudoku s = {0};
+    // int attempts = 0;
+    // while (attempts < 10) {
+    //     attempts++;
+    //     printf("attempt %d\n", attempts);
+    //     s = sudoku_create(9, 3, pseudorandom, 24);
+    //     printf("checking if solvable..\n");
+    //     if (dlx_sudoku_solutions(s) == 1) break;
+    // }
+    // sudoku_print(s);
+    // exact_cover_solve_sudoku(&s);
+    // sudoku_print(s);
+
+    //test_solvers();
 
     return 0;
 }
