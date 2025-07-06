@@ -13,24 +13,66 @@ int pseudorandom(int n)
     return rand() % n;
 }
 
-void measure_solvers(Sudoku s) 
+void measure_and_assert_solvers(Sudoku s, int num_solutions) 
 {
     clock_t start, end;
     double cpu_time_used;
 
-    printf("Exact-cover: ");
+    printf("Exact-cover:       ");
     start = clock();
     int solutions = exact_cover_sudoku_solutions(s);
     end = clock();
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
     printf("found %d solutions in %.2fs\n", solutions, cpu_time_used);
+    assert(solutions == num_solutions);
     
-    printf("Brute-force: ");
+    printf("Exact-cover (dlx): ");
+    start = clock();
+    solutions = dlx_sudoku_solutions(s);
+    end = clock();
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    printf("found %d solutions in %.2fs\n", solutions, cpu_time_used);
+    assert(solutions == num_solutions);
+    
+    printf("Brute-force:       ");
     start = clock();
     solutions = sudoku_get_solutions(s);
     end = clock();
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
     printf("found %d solutions in %.2fs\n", solutions, cpu_time_used);
+    assert(solutions == num_solutions);
+}
+
+void test_solvers()
+{
+    Sudoku s = {0};
+    printf("--wrong--\n");
+    sudoku_example_wrong(&s);
+    measure_and_assert_solvers(s, 0);
+
+    printf("--easy--\n");
+    sudoku_example_easy(&s);
+    measure_and_assert_solvers(s, 1);
+    
+    printf("--medium--\n");
+    sudoku_example_medium(&s);
+    measure_and_assert_solvers(s, 1);
+    
+    printf("--hard--\n");
+    sudoku_example_hard(&s);
+    measure_and_assert_solvers(s, 1);
+
+    printf("--very hard--\n");
+    sudoku_example_very_hard(&s);
+    measure_and_assert_solvers(s, 1);
+    
+    printf("--non proper--\n");
+    sudoku_example_non_proper(&s);
+    measure_and_assert_solvers(s, 2761);
+
+    printf("--unsolvable--\n");
+    sudoku_example_unsolvable(&s);
+    measure_and_assert_solvers(s, 0);
 }
 
 int main() 
@@ -57,27 +99,7 @@ int main()
     sudoku_print(solved);
 */
 
-    Sudoku s = {0};
-    printf("--easy--\n");
-    sudoku_example_easy(&s);
-    measure_solvers(s);
-    
-    printf("--medium--\n");
-    sudoku_example_medium(&s);
-    measure_solvers(s);
-    
-    printf("--hard--\n");
-    sudoku_example_hard(&s);
-    measure_solvers(s);
+    test_solvers();
 
-    /*printf("--very hard--\n");
-    sudoku_example_very_hard(&s);
-    measure_solvers(s);
-    sudoku_print(s);
-    */
-    printf("--non proper--\n");
-    sudoku_example_non_proper(&s);
-    measure_solvers(s);
-    
     return 0;
 }

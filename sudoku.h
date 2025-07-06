@@ -82,6 +82,8 @@ Sudoku sudoku_clone(Sudoku s)
 
 void sudoku_print(Sudoku s)
 {
+    if (sudoku_is_valid(s)) printf("[valid] ");
+    else                    printf("[invalid] ");
     printf("Sudoku %dx%d with block-size %d\n", s.size, s.size, s.block_size);
     for (int i=0; i<s.size; i++) {
         if (i % s.block_size == 0) {
