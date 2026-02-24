@@ -150,6 +150,7 @@ bool sudoku_is_valid(Sudoku s)
     return true;
 }
 
+// brute-force backtracking
 int sudoku_get_solutions(Sudoku s) 
 {
     if (!sudoku_is_valid(s)) return 0;

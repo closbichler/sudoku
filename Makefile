@@ -1,4 +1,4 @@
-sudoku: sudoku.c sudoku.h exact_cover.h examples.h
+sudoku: sudoku.c sudoku.h sudoku_solver.h examples.h
 	cc -o sudoku sudoku.c -Wall
 
 clean: 
