@@ -43,7 +43,7 @@ typedef struct {
     int *items;
     size_t count;
     size_t capacity;
-} Cover;
+} SetCover;
 
 typedef struct DLXNode {
    struct DLXNode *left, *right;
@@ -59,6 +59,12 @@ typedef struct DLXColumn {
     int len;
     int id;
 } DLXColumn;
+
+typedef struct {
+    int *items;
+    size_t count;
+    size_t capacity;
+} ColumnArray;
 
 // DA Macros from www.github.com/tsoding/nob.h
 
@@ -106,7 +112,7 @@ bool exact_cover_delete_set_by_id(Matrix *sets, int id)
     return false;
 }
 
-void exact_cover_print_sets(Matrix sets, Cover cover)
+void exact_cover_print_sets(Matrix sets, SetCover cover)
 {
     int sum[sets.items[0].count];
     for (int i = 0; i < sets.items[0].count; i++) {
@@ -167,8 +173,8 @@ bool exact_cover_delete_possibility_from_sets(Matrix* sets, int set_id)
     }
     if (set == -1) return false;
 
-    Cover rows_to_delete = {0};
-    Cover cols_to_delete = {0};
+    SetCover rows_to_delete = {0};
+    SetCover cols_to_delete = {0};
     for (int i = 0; i < sets->items[set].count; i++) {
         if (sets->items[set].items[i] == 1) {
             for (int j = 0; j < sets->count; j++) {
@@ -265,7 +271,7 @@ Matrix exact_cover_create_sudoku_constraint_sets(int size, int block_size)
     return sets;
 }
 
-bool exact_cover_is_solvable(Matrix *sets, Cover *cover)
+bool exact_cover_is_solvable(Matrix *sets, SetCover *cover)
 {
     if (sets->count == 0) return true;
 
@@ -306,7 +312,7 @@ bool exact_cover_is_solvable(Matrix *sets, Cover *cover)
     return false;
 }
 
-int exact_cover_solutions(Matrix *sets, Cover *cover)
+int exact_cover_solutions(Matrix *sets, SetCover *cover)
 {
     if (sets->count == 0) return 1;
     
@@ -362,7 +368,7 @@ bool solver_exact_cover_fill_sudoku(Sudoku* s)
    
     Matrix sets_covered = {0};
     exact_cover_clone_matrix(&sets_covered, sets);
-    Cover cover = {0};
+    SetCover cover = {0};
         
     if (!exact_cover_is_solvable(&sets_covered, &cover)) 
         return false;
@@ -407,16 +413,28 @@ int solver_exact_cover_count_solutions(Sudoku s)
    
     Matrix sets_covered = {0};
     exact_cover_clone_matrix(&sets_covered, sets);
-    Cover cover = {0};
+    SetCover cover = {0};
         
     return exact_cover_solutions(&sets_covered, &cover);
 }
 
+void dlx_print_column(DLXNode *head) 
+{
+    DLXNode *n = head;
+    int current_set = 0;
+    do {
+        for (int i=0; i<n->set_id - current_set; i++) printf("  ");
+        current_set = n->set_id + 1;
+        
+        printf("%d ", n->val);
+        n = n->down;
+    } while (n != head);
+    printf("\n");
+}
 
 void dlx_print_columns(DLXColumn *root)
 {
     DLXColumn *c = root->next;
-    int i = 0;
     printf("Col (len): \n");
     do {
         printf("%03d (%02d): ", c->id, c->len);
@@ -425,16 +443,7 @@ void dlx_print_columns(DLXColumn *root)
             printf("\n");
             continue;
         }
-        DLXNode *n = c->head;
-        do {
-            if (n == c->head) printf(":head:=");
-            printf("%d->", n->val);
-            if (n->down == c->head) printf(":down-head:");
-            if (n == c->head->up) printf(":head-up:");
-            n = n->down;
-            i++;
-        } while (n != c->head);
-        printf("\n");
+        dlx_print_column(c->head);
         c = c->next;
     } while (c != root);
 }
@@ -501,43 +510,58 @@ DLXColumn* dlx_matrix_to_linked_list(Matrix matrix)
     return root;
 }
 
-void dlx_remove_element_from_col(DLXNode *n)
+void dlx_remove_node(DLXNode *n)
 {
-    if (n->down == n) {
+    if (n == n->c->head && n->down == n) {
+        // column consists of only this node
         n->c->head = NULL;
+        n->c->len--;
+    } else if (n == n->c->head) {
+        n->c->head = n->down;
+        n->up->down = n->down;
+        n->down->up = n->up;
+        n->c->len--;
     } else {
-        if (n == n->c->head) {
-            n->c->head = n->down;
-        }
+        n->up->down = n->down;
+        n->down->up = n->up;
+        n->c->len--;
     }
-    n->up->down = n->down;
-    n->down->up = n->up;
-    n->c->len--;
 }
 
-void dlx_unremove_element_from_col(DLXNode *n)
+void dlx_unremove_node(DLXNode *n)
 {
     if (n->c->head == NULL) {
+        // column empty, add node as head
         n->c->head = n;
+        n->up = n;
+        n->down = n;
+        n->c->len++;
+    } else if (n->up->set_id > n->set_id) {
+        // node should be new head
+        n->c->head = n;
+        n->up->down = n;
+        n->down->up = n;
         n->c->len++;
     } else if (n->up->down == n && n->down->up == n) {
-        return;
-    } 
-    n->up->down = n;
-    n->down->up = n;
-    n->c->len++;
+        // already in list, do nothing
+    } else {
+        n->up->down = n;
+        n->down->up = n;
+        n->c->len++;
+    }
 }
 
 void dlx_cover_column(DLXColumn *c)
 {
     c->prev->next = c->next;
     c->next->prev = c->prev;
+
     DLXNode *n = c->head;
     if (n == NULL) return;
     do {
         DLXNode *neighbor = n->right;
         while (neighbor != n) {
-            dlx_remove_element_from_col(neighbor);
+            dlx_remove_node(neighbor);
             neighbor = neighbor->right;
         }
         n = n->down;
@@ -546,113 +570,99 @@ void dlx_cover_column(DLXColumn *c)
 
 void dlx_uncover_column(DLXColumn *c) 
 {
+    // Reinsert all nodes from each row in this column back into
+    // their respective columns, iterating in reverse (up) order.
+    
+    if (c->head == NULL) {
+        // column empty, just reattach
+        c->prev->next = c;
+        c->next->prev = c;
+        return;    
+    }
+
+    DLXNode *n = c->head->up;
+    if (n != NULL) {
+        do {
+            DLXNode *neighbor = n->left;
+            while (neighbor != n) {
+                dlx_unremove_node(neighbor);
+                neighbor = neighbor->left;
+            }
+            n = n->up;
+        } while (n != c->head->up);
+    }
+
+    // Reattach this column into the header list.
     c->prev->next = c;
     c->next->prev = c;
-    DLXNode *n = c->head;
-    if (n == NULL) return;
-    do {
-        DLXNode *neighbor = n->right;
-        while (neighbor != n) {
-            dlx_unremove_element_from_col(neighbor);
-            neighbor = neighbor->right;
-        }
-        n = n->up;
-    } while (n != c->head);
 }
 
-bool dlx_solve_exact_cover(DLXColumn *root, Cover *cover)
+DLXColumn* dlx_get_shortest_column(DLXColumn *root)
 {
-    if (root->next == root) return true;
-
-    // choose column with least 1s
-    DLXColumn *c_iter = root->next;
-    DLXColumn *c = c_iter;
+    DLXColumn *c = root->next;
+    DLXColumn *shortest_column = c;
     int min_len = c->len;
-    while (c_iter != root) {
-        if (c_iter->len < min_len) {
-            c = c_iter;
+    while (c != root) {
+        if (c->len < min_len) {
+            shortest_column = c;
             min_len = c->len;
         }
-        c_iter = c_iter->next;
+        c = c->next;
     }
-    
-    if (min_len <= 0) return false;
-    
-    DLXNode *n = c->head;
-    do {    
-        // cover row
-        da_append(cover, n->set_id);
-        DLXNode *neighbor = n;
-        do {
-            dlx_cover_column(neighbor->c);
-            neighbor = neighbor->right;
-        } while (neighbor != n);
-
-        if (dlx_solve_exact_cover(root, cover))
-            return true;
-
-        // uncover row
-        da_remove(cover, cover->count-1);
-        neighbor = n;
-        do {
-            dlx_uncover_column(neighbor->c);
-            neighbor = neighbor->right;
-        } while (neighbor != n);
-
-        n = n->down;
-    } while (n != c->head);
-
-    return false;
+    return shortest_column;
 }
 
-int dlx_exact_cover_solutions(DLXColumn *root, Cover *cover)
+void TEMP_print_cover(SetCover *cover)
+{
+    printf("cover: ");
+    for (int i=0; i<cover->count; i++) {
+        printf("%d ", cover->items[i]);
+    }
+    printf("\n");
+}
+
+int dlx_solve_exact_cover(DLXColumn *root, SetCover *cover, bool find_first_solution_only)
 {
     if (root->next == root) return 1;
 
-    // choose column with least 1s
-    DLXColumn *c_iter = root->next;
-    DLXColumn *c = c_iter;
-    int min_len = c->len;
-    while (c_iter != root) {
-        if (c_iter->len < min_len) {
-            c = c_iter;
-            min_len = c->len;
-        }
-        c_iter = c_iter->next;
-    }
-    
-    if (min_len <= 0) return 0;
-    
     int solutions = 0;
-    DLXNode *n = c->head;
-    if (n == NULL) {
-        // TODO: there's some bug in the covering and uncovering functions
-        printf("no head, but col len = %d\n", min_len);
-        return 0;
-    }
-    do {   
-        // cover row
-        da_append(cover, n->set_id);    
-        DLXNode *neighbor = n;
+
+    // choose column with least elements
+    DLXColumn *start_column = dlx_get_shortest_column(root);
+    DLXColumn *column = start_column;
+    do {
+        DLXNode *n = column->head;
+        if (n == NULL) return solutions;
+
         do {
-            dlx_cover_column(neighbor->c);
-            neighbor = neighbor->right;
-        } while (neighbor != n);
+            // cover row
+            da_append(cover, n->set_id);
+            DLXNode *neighbor = n;
+            do {
+                dlx_cover_column(neighbor->c);
+                neighbor = neighbor->right;
+            } while (neighbor != n);
 
-        solutions += dlx_exact_cover_solutions(root, cover);
+            int sub_solutions = dlx_solve_exact_cover(root, cover, find_first_solution_only);
+            if (sub_solutions > 0 && find_first_solution_only)
+                return 1;
+            solutions += sub_solutions;
+            
+            // uncover row
+            da_remove(cover, cover->count-1);
+            neighbor = n->left;
+            do {
+                dlx_uncover_column(neighbor->c);
+                neighbor = neighbor->left;
+            } while (neighbor != n->left);
 
-        // uncover row
-        da_remove(cover, cover->count-1);
-        neighbor = n;
-        do {
-            dlx_uncover_column(neighbor->c);
-            neighbor = neighbor->right;
-        } while (neighbor != n);
+            n = n->down;
+        } while (n != column->head);
+        
+        column = column->next;
+    } while (column != start_column);
 
-        n = n->down;
-    } while (n != c->head);
-
-    return solutions;
+    return solutions > 0 && find_first_solution_only ? 1 : solutions;
 }
 
 void dlx_delete_possibility(DLXColumn *root, int set_id)
@@ -660,6 +670,12 @@ void dlx_delete_possibility(DLXColumn *root, int set_id)
     DLXColumn *c = root->next;
     while (c != root) {
         DLXNode *n = c->head;
+
+        if (n == NULL) { 
+            c = c->next; 
+            continue; 
+        }
+
         do {
             if (n->set_id == set_id) {
                 DLXNode *neighbor = n;
@@ -672,6 +688,7 @@ void dlx_delete_possibility(DLXColumn *root, int set_id)
             }
             n = n->down;
         } while (n != c->head);
+
         c = c->next;
     }
 }
@@ -692,8 +709,8 @@ bool solver_solve_sudoku(Sudoku *s)
         }
     }
 
-    Cover cover = {0};
-    if (!dlx_solve_exact_cover(root, &cover)) return false;
+    SetCover cover = {0};
+    if (!dlx_solve_exact_cover(root, &cover, true)) return false;
 
     for (int k = 0; k < cover.count; k++) {
         int id = cover.items[k];
@@ -722,41 +739,9 @@ int solver_count_solutions(Sudoku s)
         }
     }
 
-    Cover cover = {0};
-    return dlx_exact_cover_solutions(root, &cover);
+    SetCover cover = {0};
+    return dlx_solve_exact_cover(root, &cover, false);
 }
-
-void exact_cover_example()
-{
-    Matrix sets = {0};
-    for (int i = 0; i < 6; i++) {
-        Set set = (Set){0};
-        set.id = i;
-        set.count = 7;
-        set.capacity = 7;
-        da_append(&sets, set);
-    }
-
-    sets.items[0].items = (int[]) { 1,0,0,1,0,0,1 };
-    sets.items[1].items = (int[]) { 1,0,0,1,0,0,0 };
-    sets.items[2].items = (int[]) { 0,0,0,1,1,0,1 };
-    sets.items[3].items = (int[]) { 0,0,1,0,1,1,0 };
-    sets.items[4].items = (int[]) { 0,1,1,0,0,1,1 };
-    sets.items[5].items = (int[]) { 0,1,0,0,0,0,1 };
-
-    // sets.items[0].items = (int[]) { 0,1,0,0,1,0,0 };
-    // sets.items[1].items = (int[]) { 0,0,1,0,0,1,0 };
-    // sets.items[2].items = (int[]) { 1,0,0,0,0,0,0 };
-    // sets.items[3].items = (int[]) { 0,0,0,1,1,0,1 };
-    // sets.items[4].items = (int[]) { 0,1,1,0,0,1,0 };
-    // sets.items[5].items = (int[]) { 0,0,0,0,0,0,0 };
-
-    
-    Cover cover = {0};
-    DLXColumn *root = dlx_matrix_to_linked_list(sets);
-    if (!dlx_solve_exact_cover(root, &cover)) printf("no solution\n");
-    exact_cover_print_sets(sets, cover);
-}   
 
 #endif // SUDOKU_SOLVER_IMPLEMENTED
 #endif // SUDOKU_SOLVER_IMPLEMENTATION

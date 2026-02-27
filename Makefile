@@ -1,9 +1,9 @@
-all: sudoku-test sudoku-web
+all: test web
 
-sudoku-test: sudoku_test.c sudoku.h sudoku_solver.h examples.h
+test: sudoku.h sudoku_test.c sudoku_solver.h examples.h
 	cc -o sudoku_test sudoku_test.c -Wall
 
-sudoku-web: 
+web: sudoku.h sudoku_solver.h examples.h
 	clang --target=wasm32 -nostdlib -c sudoku.c
 	wasm-ld --no-entry --export-all --allow-undefined \
 		-o ./public/sudoku.wasm sudoku.o
