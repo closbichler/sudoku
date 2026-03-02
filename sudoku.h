@@ -1,3 +1,10 @@
+/*----------------------
+ | Suoku header; complementary to SUS
+ |
+ | Author: Clemens Losbichler
+ | Dependencies: stdlib, stdio, string, stdbool
+ ----------------------*/
+
 #ifndef SUDOKU_H
 #define SUDOKU_H
 
@@ -12,6 +19,7 @@ typedef struct {
 Sudoku sudoku_create_empty(int size, int block_size);
 Sudoku sudoku_create(int size, int block_size, int (rand)(int n), int hints);
 Sudoku sudoku_clone(Sudoku s);
+
 void   sudoku_print(Sudoku s);
 bool   sudoku_is_valid(Sudoku s);
 bool   sudoku_is_solvable(Sudoku s);
@@ -27,7 +35,6 @@ int    sudoku_get_solutions(Sudoku s);
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include <time.h>
 
 Sudoku sudoku_create_empty(int size, int block_size)
 {
@@ -35,14 +42,14 @@ Sudoku sudoku_create_empty(int size, int block_size)
         .size = size,
         .block_size = block_size
     };
-    s.field = (char**) malloc(sizeof(int*) * size);
+    s.field = (char**) malloc(sizeof(char*) * size);
     if (s.field == NULL) {
-        printf("Malloc error\n");
+        fprintf(stderr, "Malloc error\n");
         exit(-1);
     }
 
     for (int i=0; i<s.size; i++) {
-        s.field[i] = (char*) malloc(sizeof(int) * size);
+        s.field[i] = (char*) malloc(sizeof(char) * size);
         for (int j=0; j<s.size; j++) {
             s.field[i][j] = 0;
         }
@@ -82,28 +89,28 @@ Sudoku sudoku_clone(Sudoku s)
 
 void sudoku_print(Sudoku s)
 {
-    if (sudoku_is_valid(s)) printf("[valid] ");
-    else                    printf("[invalid] ");
-    printf("Sudoku %dx%d with block-size %d\n", s.size, s.size, s.block_size);
+    if (sudoku_is_valid(s)) fprintf(stdout, "[valid] ");
+    else                    fprintf(stdout, "[invalid] ");
+    fprintf(stdout, "Sudoku %dx%d with block-size %d\n", s.size, s.size, s.block_size);
     for (int i=0; i<s.size; i++) {
         if (i % s.block_size == 0) {
-            printf("|");
-            for (int k=0; k<s.size + s.block_size/2; k++) printf("--");
-            printf("|\n");
+            fprintf(stdout, "|");
+            for (int k=0; k<s.size + s.block_size/2; k++) fprintf(stdout, "--");
+            fprintf(stdout, "|\n");
         }
         for (int j=0; j<s.size; j++) {
-            if (j % s.block_size == 0) printf("|");
-            printf("|");
+            if (j % s.block_size == 0) fprintf(stdout, "|");
+            fprintf(stdout, "|");
             if (s.field[i][j] == 0)
-                printf(" ");
+                fprintf(stdout, " ");
             else
-                printf("%d", s.field[i][j]);
+                fprintf(stdout, "%d", s.field[i][j]);
         }
-        printf("|\n");
+        fprintf(stdout, "|\n");
     }
-    printf("|");
-    for (int k=0; k<s.size+s.block_size/2; k++) printf("--");
-    printf("|\n");
+    fprintf(stdout, "|");
+    for (int k=0; k<s.size+s.block_size/2; k++) fprintf(stdout, "--");
+    fprintf(stdout, "|\n");
 }
 
 bool sudoku_is_valid(Sudoku s) 

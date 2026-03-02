@@ -1,8 +1,19 @@
 # Sudoku creator and solver
 Create and solve sudokus with different algorithmic approaches.
 
-The implementation contains one simple recursive greedy algorithm and 
-a reduction from sudoku to the exact cover problem as described by Donald Knuth (also called _Algorithm X_).
+## Build and Run
+```
+make web
+```
+
+## Test Suite
+```
+make test
+./sudoku_test with_generator
+```
+
+## Implementation
+The implementation contains one simple recursive greedy algorithm and a reduction from sudoku to the exact cover problem as described by Donald Knuth (also called _Algorithm X_).
 
 ## Resources
 - https://en.wikipedia.org/wiki/Exact_cover#Sudoku

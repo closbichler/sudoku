@@ -1,28 +1,37 @@
-#ifndef SUDOKU_SOLVER
-#define SUDOKU_SOLVER
+/*----------------------
+ | SUS - Sudoku Solver in C
+ |
+ | Author: Clemens Losbichler
+ | Dependencies: sudoku.h, stdlib, stdio, string, stdbool
+ ----------------------*/
+
+#ifndef SUS_H
+#define SUS_H
 
 #include <stdbool.h>
 #include <stdlib.h>
 
 #include "sudoku.h"
 
-bool   solver_fill_sudoku(Sudoku *s);
-int    solver_count_solutions(Sudoku s);
+/* Solves and fills sudoku with first possible solution. 
+   The legacy version is not using DLX and therefore slower.*/
+bool   sus_solve_sudoku(Sudoku *s);
+bool   sus_solve_sudoku_legacy(Sudoku *s);
 
-bool   solver_exact_cover_fill_sudoku(Sudoku *s);
-int    solver_exact_cover_count_solutions(Sudoku s);
+/* Counts all possible solutions and does not fill sudoku. 
+   The legacy version is not using DLX and therefore slower.*/
+int    sus_count_solutions(Sudoku s);
+int    sus_count_solutions_legacy(Sudoku s);
 
-#endif // SUDOKU_SOLVER
+#endif // SUS_H
 
-#ifdef SUDOKU_SOLVER_IMPLEMENTATION
-#ifndef SUDOKU_SOLVER_IMPLEMENTED
-#define SUDOKU_SOLVER_IMPLEMENTED
+#ifdef SUS_IMPLEMENTATION
+#ifndef SUS_IMPLEMENTED
+#define SUS_IMPLEMENTED
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <assert.h>
-#include <limits.h>
 
 #include "sudoku.h"
 
@@ -66,20 +75,23 @@ typedef struct {
     size_t capacity;
 } ColumnArray;
 
-// DA Macros from www.github.com/tsoding/nob.h
+// -- DA Macros from www.github.com/tsoding/nob.h --
 
 #define da_reserve(da, expected_capacity)                                              \
     do                                                                                 \
     {                                                                                  \
         if ((expected_capacity) > (da)->capacity) {                                    \
             if ((da)->capacity == 0) {                                                 \
-                (da)->capacity = 256;                                          \
+                (da)->capacity = 256;                                                  \
             }                                                                          \
             while ((expected_capacity) > (da)->capacity) {                             \
                 (da)->capacity *= 2;                                                   \
             }                                                                          \
             (da)->items = realloc((da)->items, (da)->capacity * sizeof(*(da)->items)); \
-            assert((da)->items != NULL && "Buy more RAM lol");                         \
+            if ((da)->items == NULL) {                                                 \
+                fprintf(stderr, "Failed to reallocate memory\n");                      \
+                exit(EXIT_FAILURE);                                                    \
+            }                                                                          \
         }                                                                              \
     } while (0)
 
@@ -94,14 +106,19 @@ typedef struct {
     do                                                \
     {                                                 \
         size_t jj = (i);                              \
-        assert(jj < (da)->count);                     \
+        if (jj >= (da)->count) {                         \
+            fprintf(stderr, "Index out of bounds\n"); \
+            exit(EXIT_FAILURE);                       \
+        }                                             \
         (da)->count--;                                \
         for (int jjj=jj; jjj<(da)->count; jjj++) {    \
             (da)->items[jjj] = (da)->items[jjj+1];    \
         }                                             \
     } while (0)
 
-bool exact_cover_delete_set_by_id(Matrix *sets, int id)
+// -- Exact cover implementation without DLX --
+
+bool sus_delete_set_by_id(Matrix *sets, int id)
 {
     for (int i = 0; i < sets->count; i++) {
         if (sets->items[i].id == id) {
@@ -112,7 +129,7 @@ bool exact_cover_delete_set_by_id(Matrix *sets, int id)
     return false;
 }
 
-void exact_cover_print_sets(Matrix sets, SetCover cover)
+void sus_print_sets(Matrix sets, SetCover cover)
 {
     int sum[sets.items[0].count];
     for (int i = 0; i < sets.items[0].count; i++) {
@@ -149,7 +166,7 @@ void exact_cover_print_sets(Matrix sets, SetCover cover)
     printf("\n");
 }
 
-void exact_cover_clone_matrix(Matrix* sets, Matrix to_clone)
+void sus_clone_matrix(Matrix* sets, Matrix to_clone)
 {
     *sets = (Matrix) {0};
     for (int i = 0; i < to_clone.count; i++) {
@@ -162,7 +179,7 @@ void exact_cover_clone_matrix(Matrix* sets, Matrix to_clone)
     }
 }
 
-bool exact_cover_delete_possibility_from_sets(Matrix* sets, int set_id)
+bool sus_delete_possibility_from_sets(Matrix* sets, int set_id)
 {
     int set = -1;
     for (int k=0; k<sets->count; k++) {
@@ -187,7 +204,7 @@ bool exact_cover_delete_possibility_from_sets(Matrix* sets, int set_id)
     }
 
     for (int i = 0; i < rows_to_delete.count; i++) {
-        exact_cover_delete_set_by_id(sets, rows_to_delete.items[i]);
+        sus_delete_set_by_id(sets, rows_to_delete.items[i]);
     }
     
     for (int i = cols_to_delete.count - 1; i >= 0; i--) {
@@ -198,7 +215,7 @@ bool exact_cover_delete_possibility_from_sets(Matrix* sets, int set_id)
     return true;
 }
 
-Matrix exact_cover_create_sudoku_constraint_sets(int size, int block_size)
+Matrix sus_create_sudoku_constraint_sets(int size, int block_size)
 {
     Matrix sets = {0};
     for (int i = 0; i < size * size * size; i++) {
@@ -271,12 +288,12 @@ Matrix exact_cover_create_sudoku_constraint_sets(int size, int block_size)
     return sets;
 }
 
-bool exact_cover_is_solvable(Matrix *sets, SetCover *cover)
+int sus_solve_exact_cover_legacy(Matrix *sets, SetCover *cover, bool find_first_solution_only)
 {
-    if (sets->count == 0) return true;
+    if (sets->count == 0) return 1;
 
     // choose column with least 1s
-    int column = 0, ones = INT_MAX;
+    int column = 0, ones = sets->items[0].count + 1;
     for (int i=0, j=0; i<sets->items[0].count; i++) {
         int current_ones = 0;
         for (j=0; j<sets->count; j++) {
@@ -290,47 +307,6 @@ bool exact_cover_is_solvable(Matrix *sets, SetCover *cover)
 
     if (ones == 0) return false;
 
-    for (int row = 0; row < sets->items[row].count; row++) {
-        if (sets->items[row].items[column] == 1) {
-            // save context
-            int set_id = sets->items[row].id;
-            da_append(cover, sets->items[row].id);
-            Matrix old_sets = {0};
-            exact_cover_clone_matrix(&old_sets, *sets);
-
-            exact_cover_delete_possibility_from_sets(sets, set_id);
-
-            if (exact_cover_is_solvable(sets, cover))
-                return true;
-
-            // restore context
-            exact_cover_clone_matrix(sets, old_sets);
-            da_remove(cover, cover->count-1);
-        }
-    }
-
-    return false;
-}
-
-int exact_cover_solutions(Matrix *sets, SetCover *cover)
-{
-    if (sets->count == 0) return 1;
-    
-    // choose column with least 1s
-    int column = 0, ones = INT_MAX;
-    for (int i=0, j=0; i<sets->items[0].count; i++) {
-        int current_ones = 0;
-        for (j=0; j<sets->count; j++) {
-            current_ones += sets->items[j].items[i];
-        }
-        if (current_ones < ones) {
-            column = i;
-            ones = current_ones;
-        }
-    }
-    
-    if (ones == 0) return 0;
-    
     int solutions = 0;
     for (int row = 0; row < sets->items[row].count; row++) {
         if (sets->items[row].items[column] == 1) {
@@ -338,39 +314,43 @@ int exact_cover_solutions(Matrix *sets, SetCover *cover)
             int set_id = sets->items[row].id;
             da_append(cover, sets->items[row].id);
             Matrix old_sets = {0};
-            exact_cover_clone_matrix(&old_sets, *sets);
+            sus_clone_matrix(&old_sets, *sets);
 
-            exact_cover_delete_possibility_from_sets(sets, set_id);
-            solutions += exact_cover_solutions(sets, cover);
+            sus_delete_possibility_from_sets(sets, set_id);
+
+            int sub_solutions = sus_solve_exact_cover_legacy(sets, cover, find_first_solution_only);
+            solutions += sub_solutions;
+            if (find_first_solution_only && sub_solutions > 0) 
+                return 1;
 
             // restore context
-            exact_cover_clone_matrix(sets, old_sets);
+            sus_clone_matrix(sets, old_sets);
             da_remove(cover, cover->count-1);
         }
     }
 
-    return solutions;
+    return solutions > 0 && find_first_solution_only ? 1 : solutions;
 }
 
-bool solver_exact_cover_fill_sudoku(Sudoku* s)
+bool sus_fill_sudoku_legacy(Sudoku* s)
 {
     if (!sudoku_is_valid(*s)) return false;
-    Matrix sets = exact_cover_create_sudoku_constraint_sets(s->size, s->block_size);
+    Matrix sets = sus_create_sudoku_constraint_sets(s->size, s->block_size);
 
     for (int i=0; i<s->size; i++) {
         for (int j=0; j<s->size; j++) {
             int val = s->field[i][j];
             if (val == 0) continue;
             int set_id = i * s->size * s->size + j * s->size + val - 1;
-            exact_cover_delete_possibility_from_sets(&sets, set_id);
+            sus_delete_possibility_from_sets(&sets, set_id);
         }
     }
    
     Matrix sets_covered = {0};
-    exact_cover_clone_matrix(&sets_covered, sets);
+    sus_clone_matrix(&sets_covered, sets);
     SetCover cover = {0};
         
-    if (!exact_cover_is_solvable(&sets_covered, &cover)) 
+    if (!sus_solve_exact_cover_legacy(&sets_covered, &cover, true)) 
         return false;
         
     for (int i = 0; i < sets.count; i++) {
@@ -397,28 +377,30 @@ bool solver_exact_cover_fill_sudoku(Sudoku* s)
     return true;
 }
 
-int solver_exact_cover_count_solutions(Sudoku s)
+int sus_count_solutions_legacy(Sudoku s)
 {
     if (!sudoku_is_valid(s)) return 0;
-    Matrix sets = exact_cover_create_sudoku_constraint_sets(s.size, s.block_size);
+    Matrix sets = sus_create_sudoku_constraint_sets(s.size, s.block_size);
 
     for (int i=0; i<s.size; i++) {
         for (int j=0; j<s.size; j++) {
             int val = s.field[i][j];
             if (val == 0) continue;
             int set_id = i * s.size * s.size + j * s.size + val - 1;
-            exact_cover_delete_possibility_from_sets(&sets, set_id);
+            sus_delete_possibility_from_sets(&sets, set_id);
         }
     }
    
     Matrix sets_covered = {0};
-    exact_cover_clone_matrix(&sets_covered, sets);
+    sus_clone_matrix(&sets_covered, sets);
     SetCover cover = {0};
         
-    return exact_cover_solutions(&sets_covered, &cover);
+    return sus_solve_exact_cover_legacy(&sets_covered, &cover, false);
 }
 
-void dlx_print_column(DLXNode *head) 
+// -- Exact cover implementation with DLX --
+
+void sus_dlx_print_column(DLXNode *head) 
 {
     DLXNode *n = head;
     int current_set = 0;
@@ -432,7 +414,7 @@ void dlx_print_column(DLXNode *head)
     printf("\n");
 }
 
-void dlx_print_columns(DLXColumn *root)
+void sus_dlx_print_columns(DLXColumn *root)
 {
     DLXColumn *c = root->next;
     printf("Col (len): \n");
@@ -443,12 +425,12 @@ void dlx_print_columns(DLXColumn *root)
             printf("\n");
             continue;
         }
-        dlx_print_column(c->head);
+        sus_dlx_print_column(c->head);
         c = c->next;
     } while (c != root);
 }
 
-DLXColumn* dlx_matrix_to_linked_list(Matrix matrix)
+DLXColumn* sus_dlx_matrix_to_linked_list(Matrix matrix)
 {
     DLXColumn *root = malloc(sizeof(DLXColumn));
     root->next = root;
@@ -510,7 +492,7 @@ DLXColumn* dlx_matrix_to_linked_list(Matrix matrix)
     return root;
 }
 
-void dlx_remove_node(DLXNode *n)
+void sus_dlx_remove_node(DLXNode *n)
 {
     if (n == n->c->head && n->down == n) {
         // column consists of only this node
@@ -528,7 +510,7 @@ void dlx_remove_node(DLXNode *n)
     }
 }
 
-void dlx_unremove_node(DLXNode *n)
+void sus_dlx_unremove_node(DLXNode *n)
 {
     if (n->c->head == NULL) {
         // column empty, add node as head
@@ -551,7 +533,7 @@ void dlx_unremove_node(DLXNode *n)
     }
 }
 
-void dlx_cover_column(DLXColumn *c)
+void sus_dlx_cover_column(DLXColumn *c)
 {
     c->prev->next = c->next;
     c->next->prev = c->prev;
@@ -561,14 +543,14 @@ void dlx_cover_column(DLXColumn *c)
     do {
         DLXNode *neighbor = n->right;
         while (neighbor != n) {
-            dlx_remove_node(neighbor);
+            sus_dlx_remove_node(neighbor);
             neighbor = neighbor->right;
         }
         n = n->down;
     } while (n != c->head);
 }
 
-void dlx_uncover_column(DLXColumn *c) 
+void sus_dlx_uncover_column(DLXColumn *c) 
 {
     // Reinsert all nodes from each row in this column back into
     // their respective columns, iterating in reverse (up) order.
@@ -585,7 +567,7 @@ void dlx_uncover_column(DLXColumn *c)
         do {
             DLXNode *neighbor = n->left;
             while (neighbor != n) {
-                dlx_unremove_node(neighbor);
+                sus_dlx_unremove_node(neighbor);
                 neighbor = neighbor->left;
             }
             n = n->up;
@@ -597,7 +579,7 @@ void dlx_uncover_column(DLXColumn *c)
     c->next->prev = c;
 }
 
-DLXColumn* dlx_get_shortest_column(DLXColumn *root)
+DLXColumn* sus_dlx_get_shortest_column(DLXColumn *root)
 {
     DLXColumn *c = root->next;
     DLXColumn *shortest_column = c;
@@ -612,60 +594,47 @@ DLXColumn* dlx_get_shortest_column(DLXColumn *root)
     return shortest_column;
 }
 
-void TEMP_print_cover(SetCover *cover)
-{
-    printf("cover: ");
-    for (int i=0; i<cover->count; i++) {
-        printf("%d ", cover->items[i]);
-    }
-    printf("\n");
-}
-
-int dlx_solve_exact_cover(DLXColumn *root, SetCover *cover, bool find_first_solution_only)
+int sus_dlx_solve_exact_cover(DLXColumn *root, SetCover *cover, bool find_first_solution_only)
 {
     if (root->next == root) return 1;
 
     int solutions = 0;
 
     // choose column with least elements
-    DLXColumn *start_column = dlx_get_shortest_column(root);
-    DLXColumn *column = start_column;
+    DLXColumn *start_column = sus_dlx_get_shortest_column(root);
+    DLXNode *n = start_column->head;
+    if (n == NULL) return solutions;
+
     do {
-        DLXNode *n = column->head;
-        if (n == NULL) return solutions;
-
+        // cover row
+        da_append(cover, n->set_id);
+        DLXNode *neighbor = n;
         do {
-            // cover row
-            da_append(cover, n->set_id);
-            DLXNode *neighbor = n;
-            do {
-                dlx_cover_column(neighbor->c);
-                neighbor = neighbor->right;
-            } while (neighbor != n);
+            sus_dlx_cover_column(neighbor->c);
+            neighbor = neighbor->right;
+        } while (neighbor != n);
 
-            int sub_solutions = dlx_solve_exact_cover(root, cover, find_first_solution_only);
-            if (sub_solutions > 0 && find_first_solution_only)
-                return 1;
-            solutions += sub_solutions;
-            
-            // uncover row
-            da_remove(cover, cover->count-1);
-            neighbor = n->left;
-            do {
-                dlx_uncover_column(neighbor->c);
-                neighbor = neighbor->left;
-            } while (neighbor != n->left);
-
-            n = n->down;
-        } while (n != column->head);
+        // test solution
+        int sub_solutions = sus_dlx_solve_exact_cover(root, cover, find_first_solution_only);
+        solutions += sub_solutions;
+        if (sub_solutions > 0 && find_first_solution_only)
+            return 1;
         
-        column = column->next;
-    } while (column != start_column);
+        // uncover row
+        da_remove(cover, cover->count-1);
+        neighbor = n->left;
+        do {
+            sus_dlx_uncover_column(neighbor->c);
+            neighbor = neighbor->left;
+        } while (neighbor != n->left);
 
+        n = n->down;
+    } while (n != start_column->head);
+    
     return solutions > 0 && find_first_solution_only ? 1 : solutions;
 }
 
-void dlx_delete_possibility(DLXColumn *root, int set_id)
+void sus_dlx_delete_possibility(DLXColumn *root, int set_id)
 {
     DLXColumn *c = root->next;
     while (c != root) {
@@ -680,7 +649,7 @@ void dlx_delete_possibility(DLXColumn *root, int set_id)
             if (n->set_id == set_id) {
                 DLXNode *neighbor = n;
                 do {
-                    dlx_cover_column(neighbor->c);
+                    sus_dlx_cover_column(neighbor->c);
                     neighbor = neighbor->right;
                 } while (n != neighbor);
 
@@ -693,24 +662,24 @@ void dlx_delete_possibility(DLXColumn *root, int set_id)
     }
 }
 
-bool solver_solve_sudoku(Sudoku *s)
+bool sus_solve_sudoku(Sudoku *s)
 {
     if (!sudoku_is_valid(*s)) return false;
 
-    Matrix sets = exact_cover_create_sudoku_constraint_sets(9, 3);    
-    DLXColumn *root = dlx_matrix_to_linked_list(sets);
+    Matrix sets = sus_create_sudoku_constraint_sets(9, 3);    
+    DLXColumn *root = sus_dlx_matrix_to_linked_list(sets);
 
     for (int i=0; i<s->size; i++) {
         for (int j=0; j<s->size; j++) {
             int val = s->field[i][j];
             if (val == 0) continue;
             int set_id = i * s->size * s->size + j * s->size + val - 1;
-            dlx_delete_possibility(root, set_id);
+            sus_dlx_delete_possibility(root, set_id);
         }
     }
 
     SetCover cover = {0};
-    if (!dlx_solve_exact_cover(root, &cover, true)) return false;
+    if (!sus_dlx_solve_exact_cover(root, &cover, true)) return false;
 
     for (int k = 0; k < cover.count; k++) {
         int id = cover.items[k];
@@ -723,25 +692,25 @@ bool solver_solve_sudoku(Sudoku *s)
     return true;
 }
 
-int solver_count_solutions(Sudoku s)
+int sus_count_solutions(Sudoku s)
 {
     if (!sudoku_is_valid(s)) return 0;
 
-    Matrix sets = exact_cover_create_sudoku_constraint_sets(9, 3);    
-    DLXColumn *root = dlx_matrix_to_linked_list(sets);
+    Matrix sets = sus_create_sudoku_constraint_sets(9, 3);    
+    DLXColumn *root = sus_dlx_matrix_to_linked_list(sets);
 
     for (int i=0; i<s.size; i++) {
         for (int j=0; j<s.size; j++) {
             int val = s.field[i][j];
             if (val == 0) continue;
             int set_id = i * s.size * s.size + j * s.size + val - 1;
-            dlx_delete_possibility(root, set_id);
+            sus_dlx_delete_possibility(root, set_id);
         }
     }
 
     SetCover cover = {0};
-    return dlx_solve_exact_cover(root, &cover, false);
+    return sus_dlx_solve_exact_cover(root, &cover, false);
 }
 
-#endif // SUDOKU_SOLVER_IMPLEMENTED
-#endif // SUDOKU_SOLVER_IMPLEMENTATION
+#endif // SUS_IMPLEMENTED
+#endif // SUS_IMPLEMENTATION
