@@ -2,13 +2,11 @@
  | Suoku header; complementary to SUS
  |
  | Author: Clemens Losbichler
- | Dependencies: stdlib, stdio, string, stdbool
+ | Dependencies: stdlib
  ----------------------*/
 
 #ifndef SUDOKU_H
 #define SUDOKU_H
-
-#include <stdbool.h>
 
 typedef struct {
     char** field;
@@ -21,8 +19,8 @@ Sudoku sudoku_create(int size, int block_size, int (rand)(int n), int hints);
 Sudoku sudoku_clone(Sudoku s);
 
 void   sudoku_print(Sudoku s);
-bool   sudoku_is_valid(Sudoku s);
-bool   sudoku_is_solvable(Sudoku s);
+int    sudoku_is_valid(Sudoku s);
+int    sudoku_is_solvable(Sudoku s);
 int    sudoku_get_solutions(Sudoku s);
 
 #endif // SUDOKU_H
@@ -31,10 +29,7 @@ int    sudoku_get_solutions(Sudoku s);
 #ifndef SUDOKU_IMPLEMENTED
 #define SUDOKU_IMPLEMENTED
 
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
 
 Sudoku sudoku_create_empty(int size, int block_size)
 {
@@ -44,8 +39,7 @@ Sudoku sudoku_create_empty(int size, int block_size)
     };
     s.field = (char**) malloc(sizeof(char*) * size);
     if (s.field == NULL) {
-        fprintf(stderr, "Malloc error\n");
-        exit(-1);
+        exit(-1001);
     }
 
     for (int i=0; i<s.size; i++) {
@@ -87,33 +81,7 @@ Sudoku sudoku_clone(Sudoku s)
     return c;
 }
 
-void sudoku_print(Sudoku s)
-{
-    if (sudoku_is_valid(s)) fprintf(stdout, "[valid] ");
-    else                    fprintf(stdout, "[invalid] ");
-    fprintf(stdout, "Sudoku %dx%d with block-size %d\n", s.size, s.size, s.block_size);
-    for (int i=0; i<s.size; i++) {
-        if (i % s.block_size == 0) {
-            fprintf(stdout, "|");
-            for (int k=0; k<s.size + s.block_size/2; k++) fprintf(stdout, "--");
-            fprintf(stdout, "|\n");
-        }
-        for (int j=0; j<s.size; j++) {
-            if (j % s.block_size == 0) fprintf(stdout, "|");
-            fprintf(stdout, "|");
-            if (s.field[i][j] == 0)
-                fprintf(stdout, " ");
-            else
-                fprintf(stdout, "%d", s.field[i][j]);
-        }
-        fprintf(stdout, "|\n");
-    }
-    fprintf(stdout, "|");
-    for (int k=0; k<s.size+s.block_size/2; k++) fprintf(stdout, "--");
-    fprintf(stdout, "|\n");
-}
-
-bool sudoku_is_valid(Sudoku s) 
+int sudoku_is_valid(Sudoku s) 
 {
     for (int i=0; i<s.size; i++) {
         int row[s.size + 1];
@@ -122,7 +90,7 @@ bool sudoku_is_valid(Sudoku s)
             int val = s.field[i][j];
             row[val] += 1;
             if (val != 0 && row[val] > 1) {
-                return false;
+                return 0;
             }
         }
     }    
@@ -134,7 +102,7 @@ bool sudoku_is_valid(Sudoku s)
             int val = s.field[j][i];
             col[val] += 1;
             if (val != 0 && col[val] > 1) {
-                return false;
+                return 0;
             }
         }
     }
@@ -148,13 +116,13 @@ bool sudoku_is_valid(Sudoku s)
                     int val = s.field[s.block_size * i + m][s.block_size * j + n]; 
                     cell[val] += 1;
                     if (val != 0 && cell[val] > 1) {
-                        return false;
+                        return 0;
                     }
                 }
             }
         }
     }
-    return true;
+    return 1;
 }
 
 // brute-force backtracking
@@ -177,22 +145,22 @@ int sudoku_get_solutions(Sudoku s)
     return 1;
 }
 
-bool sudoku_is_solvable(Sudoku s) 
+int sudoku_is_solvable(Sudoku s) 
 {
-    if (!sudoku_is_valid(s)) return false;
+    if (!sudoku_is_valid(s)) return 0;
     for (int i=0; i<s.size; i++) {
         for (int j=0; j<s.size; j++) {
             if (s.field[i][j] == 0) {
                 for (int d=1; d<=s.size; d++) {
                     s.field[i][j] = d;
-                    if (sudoku_is_solvable(s)) return true;
+                    if (sudoku_is_solvable(s)) return 1;
                     s.field[i][j] = 0;
                 }
-                return false;
+                return 0;
             }
         }
     }
-    return true;
+    return 1;
 }
 
 #endif // SUDOKU_IMPLEMENTED

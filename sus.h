@@ -2,36 +2,50 @@
  | SUS - Sudoku Solver in C
  |
  | Author: Clemens Losbichler
- | Dependencies: sudoku.h, stdlib, stdio, string, stdbool
+ | Dependencies: sudoku.h, stdlib
  ----------------------*/
+ 
+
+#ifndef size_t
+typedef __SIZE_TYPE__ size_t;
+#endif // size_t
+
+#ifndef NULL
+#define NULL ((void*)0)
+#endif // NULL
+
+// Link these with some implementation
+void *malloc(size_t size);
+void free(void *p);
+
 
 #ifndef SUS_H
 #define SUS_H
 
-#include <stdbool.h>
-#include <stdlib.h>
-
 #include "sudoku.h"
 
-/* Solves and fills sudoku with first possible solution. 
-   The legacy version is not using DLX and therefore slower.*/
-bool   sus_solve_sudoku(Sudoku *s);
-bool   sus_solve_sudoku_legacy(Sudoku *s);
+/* 
+ Solves and fills sudoku with first possible solution. 
+ The legacy version is not using DLX and therefore slower.
+*/
+int sus_solve_sudoku(Sudoku *s);
+int sus_solve_sudoku_legacy(Sudoku *s);
 
-/* Counts all possible solutions and does not fill sudoku. 
-   The legacy version is not using DLX and therefore slower.*/
-int    sus_count_solutions(Sudoku s);
-int    sus_count_solutions_legacy(Sudoku s);
+/* 
+ Counts all possible solutions and does not fill sudoku. 
+ Returns 1 in case of a solvable and 0 in case of an 
+ unsolvable sudoku field.
+ 
+ The legacy version is not using DLX and therefore slower.
+*/
+int sus_count_solutions(Sudoku s);
+int sus_count_solutions_legacy(Sudoku s);
 
 #endif // SUS_H
 
 #ifdef SUS_IMPLEMENTATION
 #ifndef SUS_IMPLEMENTED
 #define SUS_IMPLEMENTED
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
 
 #include "sudoku.h"
 
@@ -87,11 +101,21 @@ typedef struct {
             while ((expected_capacity) > (da)->capacity) {                             \
                 (da)->capacity *= 2;                                                   \
             }                                                                          \
-            (da)->items = realloc((da)->items, (da)->capacity * sizeof(*(da)->items)); \
-            if ((da)->items == NULL) {                                                 \
-                fprintf(stderr, "Failed to reallocate memory\n");                      \
-                exit(EXIT_FAILURE);                                                    \
+            void* new_items = malloc((da)->capacity * sizeof(*(da)->items));           \
+            if (new_items == NULL) {                                                   \
+                /* exit (-1004) */                                                     \
             }                                                                          \
+            if ((da)->items != NULL)                                                   \
+            {                                                                          \
+                char *dst = (char *)new_items;                                         \
+                char *src = (char *)(da)->items;                                       \
+                size_t bytes = (da)->count * sizeof(*(da)->items);                     \
+                for (size_t i = 0; i < bytes; ++i) dst[i] = src[i];                    \
+                free((da)->items);                                                     \
+            }                                                                          \
+            (da)->items = new_items;                                                   \
+            (da)->capacity = (da)->capacity * sizeof(*(da)->items);                    \
+            /*(da)->items = realloc((da)->items, (da)->capacity * sizeof(*(da)->items));*/ \
         }                                                                              \
     } while (0)
 
@@ -106,9 +130,9 @@ typedef struct {
     do                                                \
     {                                                 \
         size_t jj = (i);                              \
-        if (jj >= (da)->count) {                         \
-            fprintf(stderr, "Index out of bounds\n"); \
-            exit(EXIT_FAILURE);                       \
+        if (jj >= (da)->count) {                      \
+            /* exit(-1003);*/                         \
+            break;                                    \
         }                                             \
         (da)->count--;                                \
         for (int jjj=jj; jjj<(da)->count; jjj++) {    \
@@ -118,52 +142,15 @@ typedef struct {
 
 // -- Exact cover implementation without DLX --
 
-bool sus_delete_set_by_id(Matrix *sets, int id)
+int sus_delete_set_by_id(Matrix *sets, int id)
 {
     for (int i = 0; i < sets->count; i++) {
         if (sets->items[i].id == id) {
             da_remove(sets, i);
-            return true;
+            return 1;
         }
     }
-    return false;
-}
-
-void sus_print_sets(Matrix sets, SetCover cover)
-{
-    int sum[sets.items[0].count];
-    for (int i = 0; i < sets.items[0].count; i++) {
-        sum[i] = 0;
-    }
-
-    for (int i = 0; i < sets.count; i++) {
-        printf("%03d: ", sets.items[i].id);
-        for (int j = 0; j < sets.items[i].count; j++) {
-            int val = sets.items[i].items[j];
-            if (val == 1) 
-                printf("\033[31m%d\033[0m", val);
-            else 
-                printf("%d", val);
-        }
-        
-        for (int k = 0; k < cover.count; k++) {
-            if (sets.items[i].id == cover.items[k]) {
-                printf(" +++");
-                for (int j = 0; j < sets.items[i].count; j++) {
-                    if (sets.items[i].items[j] == 1)
-                        sum[j]++;
-                }
-                break;
-            }
-        }
-        printf("\n");
-    }
-
-    printf("sum: ");
-    for (int i = 0; i < sets.items[0].count; i++) {
-        printf("%d", sum[i]);
-    }
-    printf("\n");
+    return 0;
 }
 
 void sus_clone_matrix(Matrix* sets, Matrix to_clone)
@@ -179,7 +166,7 @@ void sus_clone_matrix(Matrix* sets, Matrix to_clone)
     }
 }
 
-bool sus_delete_possibility_from_sets(Matrix* sets, int set_id)
+int sus_delete_possibility_from_sets(Matrix* sets, int set_id)
 {
     int set = -1;
     for (int k=0; k<sets->count; k++) {
@@ -188,7 +175,7 @@ bool sus_delete_possibility_from_sets(Matrix* sets, int set_id)
             break;
         }
     }
-    if (set == -1) return false;
+    if (set == -1) return 0;
 
     SetCover rows_to_delete = {0};
     SetCover cols_to_delete = {0};
@@ -212,7 +199,7 @@ bool sus_delete_possibility_from_sets(Matrix* sets, int set_id)
             da_remove(&(sets->items[j]), cols_to_delete.items[i]);
         }
     }
-    return true;
+    return 1;
 }
 
 Matrix sus_create_sudoku_constraint_sets(int size, int block_size)
@@ -225,7 +212,7 @@ Matrix sus_create_sudoku_constraint_sets(int size, int block_size)
     }
     
     // cell constraints
-    for (int i=0; i<size*size && true; i++) {
+    for (int i=0; i<size*size && 1; i++) {
         for (int j=0; j<size*size; j++) {
             for (int k=0; k<size; k++) {
                 if (i == j)
@@ -237,7 +224,7 @@ Matrix sus_create_sudoku_constraint_sets(int size, int block_size)
     }
 
     // row constraints
-    for (int i = 0; i < size * size && true; i++) {
+    for (int i = 0; i < size * size && 1; i++) {
         for (int j = 0; j < size * size; j++) {
             for (int k = 0; k < size; k++) {
                 if (j == k + i - i%size)
@@ -249,7 +236,7 @@ Matrix sus_create_sudoku_constraint_sets(int size, int block_size)
     }
 
     // column constraints
-    for (int i = 0; i < size * size && true; i++) {
+    for (int i = 0; i < size * size && 1; i++) {
         for (int j = 0; j < size * size; j++) {
             for (int k = 0; k < size; k++) {
                 if (j == (i*size + k) % (size*size))
@@ -288,7 +275,7 @@ Matrix sus_create_sudoku_constraint_sets(int size, int block_size)
     return sets;
 }
 
-int sus_solve_exact_cover_legacy(Matrix *sets, SetCover *cover, bool find_first_solution_only)
+int sus_solve_exact_cover_legacy(Matrix *sets, SetCover *cover, int find_first_solution_only)
 {
     if (sets->count == 0) return 1;
 
@@ -305,7 +292,7 @@ int sus_solve_exact_cover_legacy(Matrix *sets, SetCover *cover, bool find_first_
         }
     }
 
-    if (ones == 0) return false;
+    if (ones == 0) return 0;
 
     int solutions = 0;
     for (int row = 0; row < sets->items[row].count; row++) {
@@ -332,9 +319,9 @@ int sus_solve_exact_cover_legacy(Matrix *sets, SetCover *cover, bool find_first_
     return solutions > 0 && find_first_solution_only ? 1 : solutions;
 }
 
-bool sus_fill_sudoku_legacy(Sudoku* s)
+int sus_fill_sudoku_legacy(Sudoku* s)
 {
-    if (!sudoku_is_valid(*s)) return false;
+    if (!sudoku_is_valid(*s)) return 0;
     Matrix sets = sus_create_sudoku_constraint_sets(s->size, s->block_size);
 
     for (int i=0; i<s->size; i++) {
@@ -350,14 +337,14 @@ bool sus_fill_sudoku_legacy(Sudoku* s)
     sus_clone_matrix(&sets_covered, sets);
     SetCover cover = {0};
         
-    if (!sus_solve_exact_cover_legacy(&sets_covered, &cover, true)) 
-        return false;
+    if (!sus_solve_exact_cover_legacy(&sets_covered, &cover, 1)) 
+        return 0;
         
     for (int i = 0; i < sets.count; i++) {
-        bool selected = false;
+        int selected = 0;
         for (int k = 0; k < cover.count; k++) {
             if (sets.items[i].id == cover.items[k]) {
-                selected = true;
+                selected = 1;
                 break;
             }
         }
@@ -374,7 +361,7 @@ bool sus_fill_sudoku_legacy(Sudoku* s)
         }
     }
 
-    return true;
+    return 1;
 }
 
 int sus_count_solutions_legacy(Sudoku s)
@@ -395,40 +382,10 @@ int sus_count_solutions_legacy(Sudoku s)
     sus_clone_matrix(&sets_covered, sets);
     SetCover cover = {0};
         
-    return sus_solve_exact_cover_legacy(&sets_covered, &cover, false);
+    return sus_solve_exact_cover_legacy(&sets_covered, &cover, 0);
 }
 
 // -- Exact cover implementation with DLX --
-
-void sus_dlx_print_column(DLXNode *head) 
-{
-    DLXNode *n = head;
-    int current_set = 0;
-    do {
-        for (int i=0; i<n->set_id - current_set; i++) printf("  ");
-        current_set = n->set_id + 1;
-        
-        printf("%d ", n->val);
-        n = n->down;
-    } while (n != head);
-    printf("\n");
-}
-
-void sus_dlx_print_columns(DLXColumn *root)
-{
-    DLXColumn *c = root->next;
-    printf("Col (len): \n");
-    do {
-        printf("%03d (%02d): ", c->id, c->len);
-        if (c->head == NULL) {
-            c = c->next;
-            printf("\n");
-            continue;
-        }
-        sus_dlx_print_column(c->head);
-        c = c->next;
-    } while (c != root);
-}
 
 DLXColumn* sus_dlx_matrix_to_linked_list(Matrix matrix)
 {
@@ -594,7 +551,7 @@ DLXColumn* sus_dlx_get_shortest_column(DLXColumn *root)
     return shortest_column;
 }
 
-int sus_dlx_solve_exact_cover(DLXColumn *root, SetCover *cover, bool find_first_solution_only)
+int sus_dlx_solve_exact_cover(DLXColumn *root, SetCover *cover, int find_first_solution_only)
 {
     if (root->next == root) return 1;
 
@@ -662,13 +619,13 @@ void sus_dlx_delete_possibility(DLXColumn *root, int set_id)
     }
 }
 
-bool sus_solve_sudoku(Sudoku *s)
+int sus_solve_sudoku(Sudoku *s)
 {
-    if (!sudoku_is_valid(*s)) return false;
+    if (!sudoku_is_valid(*s)) return 0;
 
     Matrix sets = sus_create_sudoku_constraint_sets(9, 3);    
     DLXColumn *root = sus_dlx_matrix_to_linked_list(sets);
-
+    
     for (int i=0; i<s->size; i++) {
         for (int j=0; j<s->size; j++) {
             int val = s->field[i][j];
@@ -679,7 +636,7 @@ bool sus_solve_sudoku(Sudoku *s)
     }
 
     SetCover cover = {0};
-    if (!sus_dlx_solve_exact_cover(root, &cover, true)) return false;
+    if (!sus_dlx_solve_exact_cover(root, &cover, 1)) return 0;
 
     for (int k = 0; k < cover.count; k++) {
         int id = cover.items[k];
@@ -689,7 +646,7 @@ bool sus_solve_sudoku(Sudoku *s)
         int val = id % s->size + 1;
         s->field[x][y] = val;
     }
-    return true;
+    return 1;
 }
 
 int sus_count_solutions(Sudoku s)
@@ -709,7 +666,7 @@ int sus_count_solutions(Sudoku s)
     }
 
     SetCover cover = {0};
-    return sus_dlx_solve_exact_cover(root, &cover, false);
+    return sus_dlx_solve_exact_cover(root, &cover, 0);
 }
 
 #endif // SUS_IMPLEMENTED

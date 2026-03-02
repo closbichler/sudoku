@@ -2,6 +2,8 @@
 #include <time.h>
 #include <assert.h>
 #include <string.h>
+#include <stdlib.h>
+#include <stdbool.h>
 
 #define SUDOKU_IMPLEMENTATION
 #include "sudoku.h"
@@ -9,6 +11,101 @@
 
 #define SUS_IMPLEMENTATION
 #include "sus.h"
+
+// -- Test and debug helper functions -- 
+
+void sudoku_print(Sudoku s)
+{
+    if (sudoku_is_valid(s)) fprintf(stdout, "[valid] ");
+    else                    fprintf(stdout, "[invalid] ");
+    fprintf(stdout, "Sudoku %dx%d with block-size %d\n", s.size, s.size, s.block_size);
+    for (int i=0; i<s.size; i++) {
+        if (i % s.block_size == 0) {
+            fprintf(stdout, "|");
+            for (int k=0; k<s.size + s.block_size/2; k++) fprintf(stdout, "--");
+            fprintf(stdout, "|\n");
+        }
+        for (int j=0; j<s.size; j++) {
+            if (j % s.block_size == 0) fprintf(stdout, "|");
+            fprintf(stdout, "|");
+            if (s.field[i][j] == 0)
+                fprintf(stdout, " ");
+            else
+                fprintf(stdout, "%d", s.field[i][j]);
+        }
+        fprintf(stdout, "|\n");
+    }
+    fprintf(stdout, "|");
+    for (int k=0; k<s.size+s.block_size/2; k++) fprintf(stdout, "--");
+    fprintf(stdout, "|\n");
+}
+
+void sus_print_sets(Matrix sets, SetCover cover)
+{
+    int sum[sets.items[0].count];
+    for (int i = 0; i < sets.items[0].count; i++) {
+        sum[i] = 0;
+    }
+
+    for (int i = 0; i < sets.count; i++) {
+        printf("%03d: ", sets.items[i].id);
+        for (int j = 0; j < sets.items[i].count; j++) {
+            int val = sets.items[i].items[j];
+            if (val == 1) 
+                printf("\033[31m%d\033[0m", val);
+            else 
+                printf("%d", val);
+        }
+        
+        for (int k = 0; k < cover.count; k++) {
+            if (sets.items[i].id == cover.items[k]) {
+                printf(" +++");
+                for (int j = 0; j < sets.items[i].count; j++) {
+                    if (sets.items[i].items[j] == 1)
+                        sum[j]++;
+                }
+                break;
+            }
+        }
+        printf("\n");
+    }
+
+    printf("sum: ");
+    for (int i = 0; i < sets.items[0].count; i++) {
+        printf("%d", sum[i]);
+    }
+    printf("\n");
+}
+
+void sus_dlx_print_column(DLXNode *head) 
+{
+    DLXNode *n = head;
+    int current_set = 0;
+    do {
+        for (int i=0; i<n->set_id - current_set; i++) printf("  ");
+        current_set = n->set_id + 1;
+        
+        printf("%d ", n->val);
+        n = n->down;
+    } while (n != head);
+    printf("\n");
+}
+
+void sus_dlx_print_columns(DLXColumn *root)
+{
+    DLXColumn *c = root->next;
+    printf("Col (len): \n");
+    do {
+        printf("%03d (%02d): ", c->id, c->len);
+        if (c->head == NULL) {
+            c = c->next;
+            printf("\n");
+            continue;
+        }
+        sus_dlx_print_column(c->head);
+        c = c->next;
+    } while (c != root);
+}
 
 // -- Random test --
 
@@ -121,17 +218,17 @@ bool test_delete_set_by_id()
 {
     Matrix sets = {0};
     create_empty_sets(3, 3, &sets);
-
+    
     sets.items[0].items = (int[]) { 1,0,0 };
     sets.items[1].items = (int[]) { 0,1,0 };
     sets.items[2].items = (int[]) { 0,0,1 };
-
+    
     bool result = sus_delete_set_by_id(&sets, 1);
     if (!result) return false;
     if (sets.count != 2) return false;
     if (sets.items[0].id != 0) return false;
     if (sets.items[1].id != 2) return false;
-
+    
     result = sus_delete_set_by_id(&sets, 5);
     if (result) return false;
     if (sets.count != 2) return false;
@@ -465,6 +562,7 @@ int main(int argc, char *argv[])
         test_results[11] = test_solve_exact_cover_incomplete((SetCover){.items=(int[]){}, .count=0});
         test_names[12] = "solve_sudoku_1";
         test_results[12] = test_solve_sudoku_1();
+        printf("kek\n");
         test_names[13] = "solve_sudoku_2";
         test_results[13] = test_solve_sudoku_2();
         test_names[14] = "count_solutions";

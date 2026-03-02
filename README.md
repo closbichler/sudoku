@@ -4,6 +4,7 @@ Create and solve sudokus with different algorithmic approaches.
 ## Build and Run
 ```
 make web
+python3 -m http.server 8080
 ```
 
 ## Test Suite
