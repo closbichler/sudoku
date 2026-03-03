@@ -32,7 +32,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Install LLD
-        run: apt install -y lld
+        run: sudo apt install -y lld
       - name: Build
         run: make web
       - name: Setup Pages
