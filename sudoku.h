@@ -2,7 +2,7 @@
  | Suoku header; complementary to SUS
  |
  | Author: Clemens Losbichler
- | Dependencies: stdlib, any malloc implementation
+ | Dependencies: any malloc implementation
  ----------------------*/
 
 #ifndef SUDOKU_H
@@ -21,9 +21,9 @@ void *malloc(size_t size);
 void free(void *p);
 
 typedef struct {
-    char** field;
     int size;
     int block_size;
+    char** field;
 } Sudoku;
 
 Sudoku sudoku_create_empty(int size, int block_size);
@@ -40,8 +40,6 @@ int    sudoku_get_solutions(Sudoku s);
 #ifndef SUDOKU_IMPLEMENTED
 #define SUDOKU_IMPLEMENTED
 
-#include <stdlib.h>
-
 Sudoku sudoku_create_empty(int size, int block_size)
 {
     Sudoku s = {
@@ -50,11 +48,17 @@ Sudoku sudoku_create_empty(int size, int block_size)
     };
     s.field = (char**) malloc(sizeof(char*) * size);
     if (s.field == NULL) {
-        exit(-1001);
+        // Allocation failed
+        return (Sudoku) { 0 };
     }
 
     for (int i=0; i<s.size; i++) {
         s.field[i] = (char*) malloc(sizeof(char) * size);
+        if (s.field[i] == NULL) {
+            // Allocation failed
+            return (Sudoku) { 0 };
+        }
+
         for (int j=0; j<s.size; j++) {
             s.field[i][j] = 0;
         }

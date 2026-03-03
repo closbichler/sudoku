@@ -1,21 +1,30 @@
 <!DOCTYPE html>
 <head>
-  <title></title>
-  <style>
-    html {
-      overflow-y: hidden;
-    }
-    #app {
-      position: absolute;
-      width: 100vw;
-      height: 100vh;
-      left: 0;
-      top: 0;
-    }
-  </style>
+  <title>Sudoku</title>
+  <link rel="stylesheet" type="text/css" href="main.css">
 </head>
 <body>
   <div id="app">
+    <div id="sudoku-container"></div>
+    
+    <div id="controls">
+      <input type="button" id="solve-button" value="Solve">
+      <input type="button" id="clear-button" value="Clear">
+      
+      <select id="type-select">
+        <option value="easy">easy</option>
+        <option value="medium">medium</option>
+        <option value="hard">hard</option>
+        <option value="very-hard">very hard</option>
+        <option value="multiple-solutions">multiple solutions</option>
+      </select>
+      <input type="button" id="new-button" value="New">
+      
+      <br>
+
+      <input type="button" id="count-button" value="Count solutions">
+      <span id="solution-count"></span>
+    </div>
   </div>
   <script src="main.js"></script>
 </body>

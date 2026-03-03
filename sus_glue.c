@@ -1,5 +1,10 @@
+#define SUDOKU_IMPLEMENTATION
+#include "sudoku.h"
+
 #define SUS_IMPLEMENTATION
 #include "sus.h"
+
+#include "examples.h"
 
 #ifndef size_t
 typedef __SIZE_TYPE__ size_t;
@@ -20,17 +25,33 @@ void WASM_EXPORT(wfree)(void* ptr) {
     free(ptr);
 }
 
-
-
-// examples
-char* WASM_EXPORT(get_kek)() {
-    return "kek";
+Sudoku* WASM_EXPORT(export_sudoku_create_empty)(int n, int b) {
+    Sudoku *s = malloc(sizeof(Sudoku));
+    *s = sudoku_create_empty(n, b);
+    return s;
 }
 
-int* WASM_EXPORT(get_arr)() {
-    int* kek = malloc(sizeof(int) * 3);
-    kek[0] = 0;
-    kek[1] = 1;
-    kek[2] = 2;
-    return kek;
+Sudoku* WASM_EXPORT(export_sudoku_create)(int size, int block_size, int (rand)(int n), int hints) {
+    Sudoku *s = malloc(sizeof(Sudoku));
+    *s = sudoku_create(size, block_size, rand, hints);
+    return s;
 }
+
+Sudoku* WASM_EXPORT(export_sudoku_clone)(Sudoku s) {
+    Sudoku *clone = malloc(sizeof(Sudoku));
+    *clone = sudoku_clone(s);
+    return clone;
+}
+
+int WASM_EXPORT(export_sudoku_is_valid)(Sudoku s)      { return sudoku_is_valid(s); }
+int WASM_EXPORT(export_sudoku_is_solvable)(Sudoku s)   { return sudoku_is_solvable(s); }
+int WASM_EXPORT(export_sudoku_get_solutions)(Sudoku s) { return sudoku_get_solutions(s); }
+
+Sudoku* WASM_EXPORT(export_sudoku_example_easy)()      { Sudoku* s = malloc(sizeof(Sudoku)); sudoku_example_easy(s); return s; }
+Sudoku* WASM_EXPORT(export_sudoku_example_medium)()    { Sudoku* s = malloc(sizeof(Sudoku)); sudoku_example_medium(s); return s; }
+Sudoku* WASM_EXPORT(export_sudoku_example_hard)()      { Sudoku* s = malloc(sizeof(Sudoku)); sudoku_example_hard(s); return s; }
+Sudoku* WASM_EXPORT(export_sudoku_example_very_hard)() { Sudoku* s = malloc(sizeof(Sudoku)); sudoku_example_very_hard(s); return s; }
+Sudoku* WASM_EXPORT(export_sudoku_example_multiple_solutions)() { Sudoku* s = malloc(sizeof(Sudoku)); sudoku_example_multiple_solutions(s); return s; }
+
+int WASM_EXPORT(export_solve_sudoku)(Sudoku* s)        { return sus_solve_sudoku(s); }
+int WASM_EXPORT(export_count_solutions)(Sudoku* s) { return sus_count_solutions(*s); }
