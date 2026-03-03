@@ -2,11 +2,23 @@
  | Suoku header; complementary to SUS
  |
  | Author: Clemens Losbichler
- | Dependencies: stdlib
+ | Dependencies: stdlib, any malloc implementation
  ----------------------*/
 
 #ifndef SUDOKU_H
 #define SUDOKU_H
+
+#ifndef size_t
+typedef __SIZE_TYPE__ size_t;
+#endif // size_t
+
+#ifndef NULL
+#define NULL ((void*)0)
+#endif // NULL
+
+// Link these with some implementation
+void *malloc(size_t size);
+void free(void *p);
 
 typedef struct {
     char** field;

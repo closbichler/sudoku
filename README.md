@@ -20,3 +20,5 @@ The implementation contains one simple recursive greedy algorithm and a reductio
 - https://en.wikipedia.org/wiki/Exact_cover#Sudoku
 - https://en.wikipedia.org/wiki/Knuth%27s_Algorithm_X
 - https://sudokugarden.de/de/info/minimal
+- https://github.com/wingo/walloc
+- https://github.com/rob-blackbourn/example-wasm-array-passing

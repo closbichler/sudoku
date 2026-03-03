@@ -1,16 +1,28 @@
-var wasm;
+function readCString(instance, ptr) {
+  const memory = instance.exports.memory;
+  const bytes = new Uint8Array(memory.buffer);
+
+  let end = ptr;
+  while (bytes[end] !== 0) end++;
+
+  const slice = bytes.subarray(ptr, end);
+  return new TextDecoder("utf-8").decode(slice);
+}
 
 async function init() {
-  wasm = await WebAssembly.instantiateStreaming(fetch("./sudoku.wasm"), {
+  const wasmModule = await WebAssembly.instantiateStreaming(fetch("./sudoku.wasm"), {
     env: { },
-  });
-  
-  console.log(wasm.instance.exports.get_kek());
-  console.log(wasm.instance.exports.get_arr());
+  })
+  const instance = wasmModule.instance
+  const memory = instance.exports.memory
 
-  // let sudoku = wasm.instance.exports.sudoku_create_empty(9, 3);
-  // wasm.instance.exports.sudoku_example_easy(sudoku);
-  // let sudoku_text_easy = wasm.instance.exports.sudoku_print(sudoku);
-  // console.log(sudoku_text_easy);
+  // examples
+  console.log(memory)
+
+  let stringPtr = instance.exports.get_kek()
+  console.log(readCString(instance, stringPtr))
+ 
+  let arrPtr = instance.exports.get_arr()
+  console.log(new Int32Array(memory.buffer, arrPtr, 3))
 }
 init();

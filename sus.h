@@ -2,9 +2,13 @@
  | SUS - Sudoku Solver in C
  |
  | Author: Clemens Losbichler
- | Dependencies: sudoku.h, stdlib
+ | Dependencies: sudoku.h, any malloc implementation
  ----------------------*/
- 
+
+#ifndef SUS_H
+#define SUS_H
+
+#include "sudoku.h"
 
 #ifndef size_t
 typedef __SIZE_TYPE__ size_t;
@@ -17,12 +21,6 @@ typedef __SIZE_TYPE__ size_t;
 // Link these with some implementation
 void *malloc(size_t size);
 void free(void *p);
-
-
-#ifndef SUS_H
-#define SUS_H
-
-#include "sudoku.h"
 
 /* 
  Solves and fills sudoku with first possible solution. 

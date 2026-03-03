@@ -20,6 +20,9 @@ void WASM_EXPORT(wfree)(void* ptr) {
     free(ptr);
 }
 
+
+
+// examples
 char* WASM_EXPORT(get_kek)() {
     return "kek";
 }
