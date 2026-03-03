@@ -30,7 +30,6 @@ Sudoku sudoku_create_empty(int size, int block_size);
 Sudoku sudoku_create(int size, int block_size, int (rand)(int n), int hints);
 Sudoku sudoku_clone(Sudoku s);
 
-void   sudoku_print(Sudoku s);
 int    sudoku_is_valid(Sudoku s);
 int    sudoku_is_solvable(Sudoku s);
 int    sudoku_get_solutions(Sudoku s);
@@ -93,13 +92,21 @@ Sudoku sudoku_clone(Sudoku s)
     return c;
 }
 
+void set_array_to_zero(int *arr, int size) 
+{
+    for (int i=0; i<size; i++) {
+        arr[i] = 0;
+    }
+}
+
 int sudoku_is_valid(Sudoku s) 
 {
     for (int i=0; i<s.size; i++) {
-        int row[s.size + 1];
-        memset(row, 0, sizeof(row));
+        int row[s.size + 1]; 
+        set_array_to_zero(row, s.size + 1);       
         for (int j=0; j<s.size; j++) {
             int val = s.field[i][j];
+            if (val > s.size) return 0;
             row[val] += 1;
             if (val != 0 && row[val] > 1) {
                 return 0;
@@ -109,7 +116,7 @@ int sudoku_is_valid(Sudoku s)
     
     for (int i=0; i<s.size; i++) {
         int col[s.size + 1];
-        memset(col, 0, sizeof(col));
+        set_array_to_zero(col, s.size + 1);
         for (int j=0; j<s.size; j++) {
             int val = s.field[j][i];
             col[val] += 1;
@@ -122,7 +129,7 @@ int sudoku_is_valid(Sudoku s)
     for (int i=0; i<s.size/s.block_size; i++) {
         for (int j=0; j<s.size/s.block_size; j++) {
             int cell[s.size + 1];
-            memset(cell, 0, sizeof(cell));
+            set_array_to_zero(cell, s.size + 1);
             for (int m=0; m<s.block_size; m++) {
                 for (int n=0; n<s.block_size; n++) {
                     int val = s.field[s.block_size * i + m][s.block_size * j + n]; 

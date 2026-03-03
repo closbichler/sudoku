@@ -112,8 +112,20 @@ typedef struct {
                 free((da)->items);                                                     \
             }                                                                          \
             (da)->items = new_items;                                                   \
-            (da)->capacity = (da)->capacity * sizeof(*(da)->items);                    \
-            /*(da)->items = realloc((da)->items, (da)->capacity * sizeof(*(da)->items));*/ \
+        }                                                                              \
+    } while (0)
+
+#define da_reserve_1(da, expected_capacity)                                              \
+    do                                                                                 \
+    {                                                                                  \
+        if ((expected_capacity) > (da)->capacity) {                                    \
+            if ((da)->capacity == 0) {                                                 \
+                (da)->capacity = 256;                                                  \
+            }                                                                          \
+            while ((expected_capacity) > (da)->capacity) {                             \
+                (da)->capacity *= 2;                                                   \
+            }                                                                          \
+            (da)->items = realloc((da)->items, (da)->capacity * sizeof(*(da)->items)); \
         }                                                                              \
     } while (0)
 

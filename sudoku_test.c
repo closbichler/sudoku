@@ -7,15 +7,17 @@
 
 #define SUDOKU_IMPLEMENTATION
 #include "sudoku.h"
-#include "examples.h"
 
 #define SUS_IMPLEMENTATION
 #include "sus.h"
+
+#include "examples.h"
 
 // -- Test and debug helper functions -- 
 
 void sudoku_print(Sudoku s)
 {
+    if (s.field == NULL) { fprintf(stdout, "empty sudoku\n"); return; }
     if (sudoku_is_valid(s)) fprintf(stdout, "[valid] ");
     else                    fprintf(stdout, "[invalid] ");
     fprintf(stdout, "Sudoku %dx%d with block-size %d\n", s.size, s.size, s.block_size);
@@ -523,6 +525,12 @@ bool test_count_solutions()
     return true;
 }
 
+typedef struct {
+    int* items;
+    size_t capacity;
+    size_t count;
+} TestArr;
+
 int main(int argc, char *argv[])
 {
     bool test_unit = true;
@@ -596,7 +604,7 @@ int main(int argc, char *argv[])
         double performance_test_results[6][3] = {0};
         Sudoku s = {0};
 
-        sudoku_example_wrong(&s);
+        sudoku_example_wrong(&s);        
         performance_test_names[0] = "wrong";
         performance_test_results[0][0] = measure_and_assert_solver(sus_count_solutions, s, 0);
         performance_test_results[0][1] = measure_and_assert_solver(sus_count_solutions_legacy, s, 0);
