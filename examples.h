@@ -1,3 +1,10 @@
+/*----------------------
+ | Suoku header; complementary to SUS
+ |
+ | Author: Clemens Losbichler
+ | Dependencies: sudoku.h
+ ----------------------*/
+
 void copy_board_to_sudoku(char board[9][9], Sudoku s) 
 {
     int N = 9;
@@ -94,6 +101,24 @@ void copy_board_to_sudoku(char board[9][9], Sudoku s)
             { 5,0,8, 0,0,0, 0,0,0 },                      \
             { 0,0,0, 0,0,0, 0,2,0 },                      \
             { 0,0,0, 0,1,0, 5,4,0 },                      \
+        };                                                \
+        copy_board_to_sudoku(board, *s);                  \
+    } while (0)
+
+#define sudoku_example_even_more_solutions(s)             \
+    do                                                    \
+    {                                                     \
+        *(s) = (Sudoku) sudoku_create_empty(9, 3);        \
+        static char board[9][9] = {                       \
+            { 1,4,5, 0,0,0, 0,0,0 },                      \
+            { 0,2,0, 0,0,0, 0,0,0 },                      \
+            { 0,0,3, 0,0,0, 0,0,0 },                      \
+            { 0,0,0, 1,4,5, 0,0,0 },                      \
+            { 0,0,0, 0,2,0, 0,0,0 },                      \
+            { 0,0,0, 0,0,3, 0,0,0 },                      \
+            { 0,0,0, 0,0,0, 1,4,5 },                      \
+            { 0,0,0, 0,0,0, 0,2,0 },                      \
+            { 0,0,0, 0,0,0, 0,0,3 },                      \
         };                                                \
         copy_board_to_sudoku(board, *s);                  \
     } while (0)

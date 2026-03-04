@@ -119,8 +119,10 @@ async function init() {
 
   document.getElementById("count-button").addEventListener("click", (e) => {
     let count = wasmInstance.exports.export_count_solutions(game.board.ptr)
-    document.getElementById("solution-count").textContent = "Number of solutions: " + count;
-    console.log("Number of solutions:", count)
+    let text = count > 1000000 ? "Number of solutions: > 1 million" : "Number of solutions: " + count;
+
+    document.getElementById("solution-count").textContent = text;
+    console.log(text)
   })
 
   createSudokuHtml(game.board);

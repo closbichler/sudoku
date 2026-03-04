@@ -32,7 +32,7 @@ Sudoku sudoku_clone(Sudoku s);
 
 int    sudoku_is_valid(Sudoku s);
 int    sudoku_is_solvable(Sudoku s);
-int    sudoku_get_solutions(Sudoku s);
+uint   sudoku_get_solutions(Sudoku s);
 
 #endif // SUDOKU_H
 
@@ -149,10 +149,10 @@ int sudoku_is_valid(Sudoku s)
 }
 
 // brute-force backtracking
-int sudoku_get_solutions(Sudoku s) 
+uint sudoku_get_solutions(Sudoku s) 
 {
     if (!sudoku_is_valid(s)) return 0;
-    int solutions = 0;
+    uint solutions = 0;
     for (int i=0; i<s.size; i++) {
         for (int j=0; j<s.size; j++) {
             if (s.field[i][j] == 0) {

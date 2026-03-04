@@ -36,8 +36,8 @@ int sus_solve_sudoku_legacy(Sudoku *s);
  
  The legacy version is not using DLX and therefore slower.
 */
-int sus_count_solutions(Sudoku s);
-int sus_count_solutions_legacy(Sudoku s);
+uint sus_count_solutions(Sudoku s);
+uint sus_count_solutions_legacy(Sudoku s);
 
 #endif // SUS_H
 
@@ -374,7 +374,7 @@ int sus_fill_sudoku_legacy(Sudoku* s)
     return 1;
 }
 
-int sus_count_solutions_legacy(Sudoku s)
+uint sus_count_solutions_legacy(Sudoku s)
 {
     if (!sudoku_is_valid(s)) return 0;
     Matrix sets = sus_create_sudoku_constraint_sets(s.size, s.block_size);
@@ -561,11 +561,11 @@ DLXColumn* sus_dlx_get_shortest_column(DLXColumn *root)
     return shortest_column;
 }
 
-int sus_dlx_solve_exact_cover(DLXColumn *root, SetCover *cover, int find_first_solution_only)
+uint sus_dlx_solve_exact_cover(DLXColumn *root, SetCover *cover, int find_first_solution_only)
 {
     if (root->next == root) return 1;
 
-    int solutions = 0;
+    uint solutions = 0;
 
     // choose column with least elements
     DLXColumn *start_column = sus_dlx_get_shortest_column(root);
@@ -582,10 +582,13 @@ int sus_dlx_solve_exact_cover(DLXColumn *root, SetCover *cover, int find_first_s
         } while (neighbor != n);
 
         // test solution
-        int sub_solutions = sus_dlx_solve_exact_cover(root, cover, find_first_solution_only);
+        uint sub_solutions = sus_dlx_solve_exact_cover(root, cover, find_first_solution_only);
         solutions += sub_solutions;
         if (sub_solutions > 0 && find_first_solution_only)
             return 1;
+        // TODO: not quit after 1 mio. solutions, but optimize it and count everything
+        if (solutions > 1000000 && !find_first_solution_only)
+            return solutions;
         
         // uncover row
         da_remove(cover, cover->count-1);
@@ -659,7 +662,7 @@ int sus_solve_sudoku(Sudoku *s)
     return 1;
 }
 
-int sus_count_solutions(Sudoku s)
+uint sus_count_solutions(Sudoku s)
 {
     if (!sudoku_is_valid(s)) return 0;
 
@@ -676,6 +679,7 @@ int sus_count_solutions(Sudoku s)
     }
 
     SetCover cover = {0};
+    da_reserve(&cover, sets.count);
     return sus_dlx_solve_exact_cover(root, &cover, 0);
 }
 
