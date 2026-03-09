@@ -3,3 +3,5 @@ exact_cover
 dlx
 .vscode/
 sudoku_test
+*.wasm
+*.o

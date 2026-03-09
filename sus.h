@@ -10,13 +10,14 @@
 
 #include "sudoku.h"
 
-#ifndef size_t
-typedef __SIZE_TYPE__ size_t;
-#endif // size_t
-
 #ifndef NULL
 #define NULL ((void*)0)
 #endif // NULL
+
+#ifndef size_t
+typedef __SIZE_TYPE__ size_t;
+typedef __UINT32_TYPE__ uint;
+#endif // size_t
 
 // Link these with some implementation
 void *malloc(size_t size);
@@ -561,6 +562,32 @@ DLXColumn* sus_dlx_get_shortest_column(DLXColumn *root)
     return shortest_column;
 }
 
+typedef struct {
+    int* items;
+    size_t capacity;
+    size_t count;
+} SetCoverHashtable;
+
+SetCoverHashtable table = {0};
+uint successful_lookups = 0;
+
+int sus_lookup_setcover_solutions(SetCover setcover)
+{
+    int hash = 0;
+    for (int i=0; i<setcover.count; i++) {
+        hash += setcover.items[i];
+    }
+
+    for (int i=0; i<table.count; i++) {
+        if (table.items[i] == hash) {
+            return 1;
+        }
+    }
+ 
+    da_append(&table, hash);
+    return -1;
+}
+
 uint sus_dlx_solve_exact_cover(DLXColumn *root, SetCover *cover, int find_first_solution_only)
 {
     if (root->next == root) return 1;
@@ -582,6 +609,11 @@ uint sus_dlx_solve_exact_cover(DLXColumn *root, SetCover *cover, int find_first_
         } while (neighbor != n);
 
         // test solution
+        int lookup_solutions = sus_lookup_setcover_solutions(*cover);
+        if (lookup_solutions != -1) {
+            successful_lookups++;
+        }
+
         uint sub_solutions = sus_dlx_solve_exact_cover(root, cover, find_first_solution_only);
         solutions += sub_solutions;
         if (sub_solutions > 0 && find_first_solution_only)
@@ -680,7 +712,9 @@ uint sus_count_solutions(Sudoku s)
 
     SetCover cover = {0};
     da_reserve(&cover, sets.count);
-    return sus_dlx_solve_exact_cover(root, &cover, 0);
+    uint sol = sus_dlx_solve_exact_cover(root, &cover, 0);
+    printf("successful lookups: %d\n", successful_lookups);
+    return sol;
 }
 
 #endif // SUS_IMPLEMENTED

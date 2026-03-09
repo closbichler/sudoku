@@ -8,13 +8,14 @@
 #ifndef SUDOKU_H
 #define SUDOKU_H
 
-#ifndef size_t
-typedef __SIZE_TYPE__ size_t;
-#endif // size_t
-
 #ifndef NULL
 #define NULL ((void*)0)
 #endif // NULL
+
+#ifndef size_t
+typedef __SIZE_TYPE__ size_t;
+typedef __UINT32_TYPE__ uint;
+#endif // size_t
 
 // Link these with some implementation
 void *malloc(size_t size);

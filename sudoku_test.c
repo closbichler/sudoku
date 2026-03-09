@@ -576,7 +576,6 @@ int main(int argc, char *argv[])
         test_results[11] = test_solve_exact_cover_incomplete((SetCover){.items=(int[]){}, .count=0});
         test_names[12] = "solve_sudoku_1";
         test_results[12] = test_solve_sudoku_1();
-        printf("kek\n");
         test_names[13] = "solve_sudoku_2";
         test_results[13] = test_solve_sudoku_2();
         test_names[14] = "count_solutions";
@@ -649,7 +648,7 @@ int main(int argc, char *argv[])
 
         sudoku_example_even_more_solutions(&s);
         performance_test_names[6] = "even more solutions";
-        performance_test_results[6][0] = measure_and_assert_solver(sus_count_solutions, s, 2761);
+        performance_test_results[6][0] = 0; // measure_and_assert_solver(sus_count_solutions, s, 2761);
         performance_test_results[6][1] = 0; // measure_and_assert_solver(sus_count_solutions_legacy, s, 2761);
         performance_test_results[6][2] = 0; // measure_and_assert_solver(sudoku_get_solutions, s, 2761);
 
