@@ -14,7 +14,7 @@
 
 #ifndef size_t
 typedef __SIZE_TYPE__ size_t;
-typedef __UINT32_TYPE__ uint;
+typedef unsigned long int ulong;
 #endif // size_t
 
 // Link these with some implementation
@@ -33,7 +33,7 @@ Sudoku sudoku_clone(Sudoku s);
 
 int    sudoku_is_valid(Sudoku s);
 int    sudoku_is_solvable(Sudoku s);
-uint   sudoku_get_solutions(Sudoku s);
+ulong  sudoku_get_solutions(Sudoku s);
 
 #endif // SUDOKU_H
 
@@ -150,10 +150,10 @@ int sudoku_is_valid(Sudoku s)
 }
 
 // brute-force backtracking
-uint sudoku_get_solutions(Sudoku s) 
+ulong sudoku_get_solutions(Sudoku s) 
 {
     if (!sudoku_is_valid(s)) return 0;
-    uint solutions = 0;
+    ulong solutions = 0;
     for (int i=0; i<s.size; i++) {
         for (int j=0; j<s.size; j++) {
             if (s.field[i][j] == 0) {

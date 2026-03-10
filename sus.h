@@ -16,7 +16,7 @@
 
 #ifndef size_t
 typedef __SIZE_TYPE__ size_t;
-typedef __UINT32_TYPE__ uint;
+typedef unsigned long int ulong;
 #endif // size_t
 
 // Link these with some implementation
@@ -37,8 +37,8 @@ int sus_solve_sudoku_legacy(Sudoku *s);
  
  The legacy version is not using DLX and therefore slower.
 */
-uint sus_count_solutions(Sudoku s);
-uint sus_count_solutions_legacy(Sudoku s);
+ulong sus_count_solutions(Sudoku s);
+ulong sus_count_solutions_legacy(Sudoku s);
 
 #endif // SUS_H
 
@@ -286,7 +286,7 @@ Matrix sus_create_sudoku_constraint_sets(int size, int block_size)
     return sets;
 }
 
-int sus_solve_exact_cover_legacy(Matrix *sets, SetCover *cover, int find_first_solution_only)
+ulong sus_solve_exact_cover_legacy(Matrix *sets, SetCover *cover, int find_first_solution_only)
 {
     if (sets->count == 0) return 1;
 
@@ -305,7 +305,7 @@ int sus_solve_exact_cover_legacy(Matrix *sets, SetCover *cover, int find_first_s
 
     if (ones == 0) return 0;
 
-    int solutions = 0;
+    ulong solutions = 0;
     for (int row = 0; row < sets->items[row].count; row++) {
         if (sets->items[row].items[column] == 1) {
             // save context
@@ -316,7 +316,7 @@ int sus_solve_exact_cover_legacy(Matrix *sets, SetCover *cover, int find_first_s
 
             sus_delete_possibility_from_sets(sets, set_id);
 
-            int sub_solutions = sus_solve_exact_cover_legacy(sets, cover, find_first_solution_only);
+            ulong sub_solutions = sus_solve_exact_cover_legacy(sets, cover, find_first_solution_only);
             solutions += sub_solutions;
             if (find_first_solution_only && sub_solutions > 0) 
                 return 1;
@@ -330,7 +330,7 @@ int sus_solve_exact_cover_legacy(Matrix *sets, SetCover *cover, int find_first_s
     return solutions > 0 && find_first_solution_only ? 1 : solutions;
 }
 
-int sus_fill_sudoku_legacy(Sudoku* s)
+int sus_solve_sudoku_legacy(Sudoku* s)
 {
     if (!sudoku_is_valid(*s)) return 0;
     Matrix sets = sus_create_sudoku_constraint_sets(s->size, s->block_size);
@@ -347,7 +347,6 @@ int sus_fill_sudoku_legacy(Sudoku* s)
     Matrix sets_covered = {0};
     sus_clone_matrix(&sets_covered, sets);
     SetCover cover = {0};
-        
     if (!sus_solve_exact_cover_legacy(&sets_covered, &cover, 1)) 
         return 0;
         
@@ -375,7 +374,7 @@ int sus_fill_sudoku_legacy(Sudoku* s)
     return 1;
 }
 
-uint sus_count_solutions_legacy(Sudoku s)
+ulong sus_count_solutions_legacy(Sudoku s)
 {
     if (!sudoku_is_valid(s)) return 0;
     Matrix sets = sus_create_sudoku_constraint_sets(s.size, s.block_size);
@@ -392,7 +391,6 @@ uint sus_count_solutions_legacy(Sudoku s)
     Matrix sets_covered = {0};
     sus_clone_matrix(&sets_covered, sets);
     SetCover cover = {0};
-        
     return sus_solve_exact_cover_legacy(&sets_covered, &cover, 0);
 }
 
@@ -562,37 +560,95 @@ DLXColumn* sus_dlx_get_shortest_column(DLXColumn *root)
     return shortest_column;
 }
 
+typedef struct SetCoverHashEntry SetCoverHashEntry;
+
+struct SetCoverHashEntry {
+    long hash;
+    ulong solutions;
+    SetCoverHashEntry* next;
+};
+
 typedef struct {
-    int* items;
+    SetCoverHashEntry* items;
     size_t capacity;
     size_t count;
-} SetCoverHashtable;
+} SetCoverHashTable;
 
-SetCoverHashtable table = {0};
-uint successful_lookups = 0;
+SetCoverHashTable table;
+int ff_dynamic_programming = 0;
+
+long sus_hash_setcover(SetCover setcover)
+{
+    long hash = 1;
+    for (int i=0; i<setcover.count; i++) {
+        hash ^= setcover.items[i] * 4242829781;//0x9e3779b1;
+    }
+    return hash;
+}
 
 int sus_lookup_setcover_solutions(SetCover setcover)
 {
-    int hash = 0;
-    for (int i=0; i<setcover.count; i++) {
-        hash += setcover.items[i];
-    }
+    long hash = sus_hash_setcover(setcover);
+    size_t index = hash % table.capacity;
 
-    for (int i=0; i<table.count; i++) {
-        if (table.items[i] == hash) {
-            return 1;
+    SetCoverHashEntry entry = table.items[index];
+    if (entry.solutions != -1) {
+        if (entry.hash == hash) {
+            return (int) entry.solutions;
+        } else {
+            SetCoverHashEntry* e = entry.next;
+            while (e != NULL) {
+                if (e->hash == hash) 
+                    return e->solutions;
+                e = e->next;
+            }
         }
     }
- 
-    da_append(&table, hash);
     return -1;
 }
 
-uint sus_dlx_solve_exact_cover(DLXColumn *root, SetCover *cover, int find_first_solution_only)
+void sus_store_setcover_solutions(SetCover setcover, ulong solutions)
+{
+    long hash = sus_hash_setcover(setcover);
+    size_t index = hash % table.capacity;
+
+    if (table.items[index].solutions == -1) {
+        table.items[index] = (SetCoverHashEntry) {
+            .hash = hash,
+            .solutions = solutions,
+        };
+    } else {
+        SetCoverHashEntry* e = &table.items[index];
+        while (e->next != NULL) {
+            e = e->next;
+        }
+        e->next = (SetCoverHashEntry*) malloc(sizeof(SetCoverHashEntry));
+        e->next->hash = hash;
+        e->next->solutions = solutions;
+        e->next->next = NULL;
+    }
+}
+
+void sus_create_setcover_hashtable(int size) {
+    table = (SetCoverHashTable) {0};
+    da_reserve(&table, size);
+    table.count = table.capacity;
+
+    for (int i=0; i<table.count; i++) {
+        // NULL-element
+        table.items[i] = (SetCoverHashEntry) {
+            .hash = -1,
+            .solutions = -1,
+            .next = NULL,
+        };
+    }
+}
+
+ulong sus_dlx_solve_exact_cover(DLXColumn *root, SetCover *cover, int find_first_solution_only)
 {
     if (root->next == root) return 1;
 
-    uint solutions = 0;
+    ulong solutions = 0;
 
     // choose column with least elements
     DLXColumn *start_column = sus_dlx_get_shortest_column(root);
@@ -600,8 +656,15 @@ uint sus_dlx_solve_exact_cover(DLXColumn *root, SetCover *cover, int find_first_
     if (n == NULL) return solutions;
 
     do {
-        // cover row
         da_append(cover, n->set_id);
+
+        if (ff_dynamic_programming && sus_lookup_setcover_solutions(*cover) != -1) {
+            da_remove(cover, cover->count-1);   
+            n = n->down;
+            continue;
+        }
+
+        // cover row
         DLXNode *neighbor = n;
         do {
             sus_dlx_cover_column(neighbor->c);
@@ -609,18 +672,18 @@ uint sus_dlx_solve_exact_cover(DLXColumn *root, SetCover *cover, int find_first_
         } while (neighbor != n);
 
         // test solution
-        int lookup_solutions = sus_lookup_setcover_solutions(*cover);
-        if (lookup_solutions != -1) {
-            successful_lookups++;
-        }
-
-        uint sub_solutions = sus_dlx_solve_exact_cover(root, cover, find_first_solution_only);
+        ulong sub_solutions = sus_dlx_solve_exact_cover(root, cover, find_first_solution_only);
         solutions += sub_solutions;
         if (sub_solutions > 0 && find_first_solution_only)
             return 1;
-        // TODO: not quit after 1 mio. solutions, but optimize it and count everything
-        if (solutions > 1000000 && !find_first_solution_only)
+
+        // TODO: not quit after 100.000 solutions, but optimize it and count everything
+        if (solutions > 100000 && !find_first_solution_only)
             return solutions;
+
+        if (ff_dynamic_programming) {
+            sus_store_setcover_solutions(*cover, sub_solutions);
+        }
         
         // uncover row
         da_remove(cover, cover->count-1);
@@ -694,7 +757,7 @@ int sus_solve_sudoku(Sudoku *s)
     return 1;
 }
 
-uint sus_count_solutions(Sudoku s)
+ulong sus_count_solutions(Sudoku s)
 {
     if (!sudoku_is_valid(s)) return 0;
 
@@ -710,11 +773,11 @@ uint sus_count_solutions(Sudoku s)
         }
     }
 
+    sus_create_setcover_hashtable(sets.count * sets.count);
+    
     SetCover cover = {0};
     da_reserve(&cover, sets.count);
-    uint sol = sus_dlx_solve_exact_cover(root, &cover, 0);
-    printf("successful lookups: %d\n", successful_lookups);
-    return sol;
+    return sus_dlx_solve_exact_cover(root, &cover, 0);
 }
 
 #endif // SUS_IMPLEMENTED

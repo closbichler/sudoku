@@ -5,3 +5,4 @@ dlx
 sudoku_test
 *.wasm
 *.o
+*.su

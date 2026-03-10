@@ -146,17 +146,17 @@ void generate_and_solve_random_sudoku(int hints, int max_attempts)
 
 // -- Performance Tests --
 
-double measure_and_assert_solver(uint (*F)(Sudoku), Sudoku s, uint num_solutions) 
+double measure_and_assert_solver(ulong (*F)(Sudoku), Sudoku s, ulong num_solutions) 
 {
     clock_t start, end;
     double cpu_time_used;
-    uint solutions;
+    ulong solutions;
 
     start = clock();
     solutions = F(s);
     end = clock();
     if (solutions != num_solutions) {
-        fprintf(stderr, "\x1b[31m Expected %d solutions but got %d.\x1b[0m\n", num_solutions, solutions);
+        fprintf(stderr, "\x1b[31m Expected %ld solutions but got %ld.\x1b[0m\n", num_solutions, solutions);
     }
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
     return cpu_time_used;
@@ -414,6 +414,27 @@ bool test_get_shortest_column()
     return true;
 }
 
+bool test_setcover_hashtable() 
+{
+    sus_create_setcover_hashtable(10);
+
+    int h1 = sus_hash_setcover((SetCover){.items=(int[]){1,2,3}, .count=3});
+    int h2 = sus_hash_setcover((SetCover){.items=(int[]){3,2,1}, .count=3});
+    int h3 = sus_hash_setcover((SetCover){.items=(int[]){1,3,2}, .count=3});
+    int h4 = sus_hash_setcover((SetCover){.items=(int[]){2,3,1}, .count=3});
+    int h5 = sus_hash_setcover((SetCover){.items=(int[]){3,1,2}, .count=3});
+    int h6 = sus_hash_setcover((SetCover){.items=(int[]){1,4,5,6}, .count=4});
+    if (h1 != h2 || h1 != h3 || h1 != h4 || h1 != h5) return false;
+    if (h1 == h6) return false;
+
+    sus_store_setcover_solutions((SetCover){.items=(int[]){1,2,3}, .count=3}, 42);
+    sus_store_setcover_solutions((SetCover){.items=(int[]){1,4,5}, .count=3}, 42);
+
+    if (sus_lookup_setcover_solutions((SetCover){.items=(int[]){1,2,3}, .count=3}) != 42) return false;
+    if (sus_lookup_setcover_solutions((SetCover){.items=(int[]){1,4,5}, .count=3}) != 42) return false;
+    return true;
+}
+
 bool test_solve_exact_cover_1(SetCover expected_cover)
 {
     Matrix sets = {0};
@@ -426,6 +447,7 @@ bool test_solve_exact_cover_1(SetCover expected_cover)
     SetCover cover = {0};
     DLXColumn *root = sus_dlx_matrix_to_linked_list(sets);
 
+    sus_create_setcover_hashtable(16);
     int result = sus_dlx_solve_exact_cover(root, &cover, true);
     if (result != 1) return false;
     if (!set_covers_equal(expected_cover, cover)) return false;
@@ -447,6 +469,7 @@ bool test_solve_exact_cover_2(SetCover expected_cover)
     SetCover cover = {0};
     DLXColumn *root = sus_dlx_matrix_to_linked_list(sets);
 
+    sus_create_setcover_hashtable(16);
     int result = sus_dlx_solve_exact_cover(root, &cover, true);
     if (result != 1) return false;
     if (!set_covers_equal(expected_cover, cover)) return false;
@@ -489,6 +512,7 @@ bool test_solve_exact_cover_incomplete(SetCover expected_cover)
     SetCover cover = {0};
     DLXColumn *root = sus_dlx_matrix_to_linked_list(sets);
 
+    sus_create_setcover_hashtable(16);
     int result = sus_dlx_solve_exact_cover(root, &cover, true);
     if (result != 0) return false;
     if (!set_covers_equal(expected_cover, cover)) return false;
@@ -521,20 +545,14 @@ bool test_count_solutions()
 
     Sudoku s2 = {0};
     sudoku_example_multiple_solutions(&s2);
-    int result = sus_count_solutions(s2);
+    ulong result = sus_count_solutions(s2);
     if(result != 2761) return false;
-
+    
     Sudoku s3 = {0};
     sudoku_example_no_solutions(&s3);
     if(sus_count_solutions(s3) != 0) return false;
     return true;
 }
-
-typedef struct {
-    int* items;
-    size_t capacity;
-    size_t count;
-} TestArr;
 
 int main(int argc, char *argv[])
 {
@@ -546,7 +564,7 @@ int main(int argc, char *argv[])
     if (!test_unit) {
         fprintf(stdout, "skipped.\n\n");
     } else {
-        int num_tests = 15;
+        int num_tests = 16;
         char* test_names[num_tests];
         bool test_results[num_tests];
 
@@ -566,21 +584,23 @@ int main(int argc, char *argv[])
         test_results[6] = test_uncover_column_2();
         test_names[7] = "get_shortest_column";
         test_results[7] = test_get_shortest_column();
-        test_names[8] = "solve_exact_cover_1";
-        test_results[8] = test_solve_exact_cover_1((SetCover){.items=(int[]){0,2}, .count=2});
-        test_names[9] = "solve_exact_cover_2";
-        test_results[9] = test_solve_exact_cover_2((SetCover){.items=(int[]){1,3,5}, .count=3});
-        test_names[10] = "solve_exact_cover_3";
-        test_results[10] = test_solve_exact_cover_3((SetCover){.items=(int[]){2,3,4}, .count=3});
-        test_names[11] = "solve_exact_cover_incomplete";
-        test_results[11] = test_solve_exact_cover_incomplete((SetCover){.items=(int[]){}, .count=0});
-        test_names[12] = "solve_sudoku_1";
-        test_results[12] = test_solve_sudoku_1();
-        test_names[13] = "solve_sudoku_2";
-        test_results[13] = test_solve_sudoku_2();
-        test_names[14] = "count_solutions";
-        test_results[14] = test_count_solutions();
-
+        test_names[8] = "setcover_hashtable";
+        test_results[8] = test_setcover_hashtable();
+        test_names[9] = "solve_exact_cover_1";
+        test_results[9] = test_solve_exact_cover_1((SetCover){.items=(int[]){0,2}, .count=2});
+        test_names[10] = "solve_exact_cover_2";
+        test_results[10] = test_solve_exact_cover_2((SetCover){.items=(int[]){1,3,5}, .count=3});
+        test_names[11] = "solve_exact_cover_3";
+        test_results[11] = test_solve_exact_cover_3((SetCover){.items=(int[]){2,3,4}, .count=3});
+        test_names[12] = "solve_exact_cover_incomplete";
+        test_results[12] = test_solve_exact_cover_incomplete((SetCover){.items=(int[]){}, .count=0});
+        test_names[13] = "solve_sudoku_1";
+        test_results[13] = test_solve_sudoku_1();
+        test_names[14] = "solve_sudoku_2";
+        test_results[14] = test_solve_sudoku_2();
+        test_names[15] = "count_solutions";
+        test_results[15] = test_count_solutions();
+        
         // Print test results with dot-fill and colored PASS/FAIL
         fprintf(stdout, "\nTest name                                             Result\n");
         for (int i = 0; i < num_tests; i++) {
@@ -648,7 +668,7 @@ int main(int argc, char *argv[])
 
         sudoku_example_even_more_solutions(&s);
         performance_test_names[6] = "even more solutions";
-        performance_test_results[6][0] = 0; // measure_and_assert_solver(sus_count_solutions, s, 2761);
+        performance_test_results[6][0] = measure_and_assert_solver(sus_count_solutions, s, 2761);
         performance_test_results[6][1] = 0; // measure_and_assert_solver(sus_count_solutions_legacy, s, 2761);
         performance_test_results[6][2] = 0; // measure_and_assert_solver(sudoku_get_solutions, s, 2761);
 
