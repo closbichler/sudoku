@@ -40,6 +40,13 @@ int sus_solve_sudoku_legacy(Sudoku *s);
 ulong sus_count_solutions(Sudoku s);
 ulong sus_count_solutions_legacy(Sudoku s);
 
+/*
+ Generates a sudoku field with according size and block_size 
+ and fills it with the amount of hints. The sudoku is 
+ always solvable (has exactly 1 solution).
+*/
+Sudoku sus_generate_sudoku(int size, int block_size, int hints, int (rand)(int));
+
 #endif // SUS_H
 
 #ifdef SUS_IMPLEMENTATION
@@ -780,6 +787,25 @@ ulong sus_count_solutions(Sudoku s)
     SetCover cover = {0};
     da_reserve(&cover, sets.count);
     return sus_dlx_solve_exact_cover(root, &cover, 0);
+}
+
+Sudoku sus_generate_sudoku(int size, int block_size, int hints, int (rand)(int))
+{
+    Sudoku s = sudoku_create_empty(size, block_size);
+    while (hints > 0) {
+        int x = rand(s.size);       
+        int y = rand(s.size);
+        char val = rand(s.size) + 1;
+        if (s.field[x][y] == 0) {
+            s.field[x][y] = val;
+            if (!sudoku_is_valid(s)) {
+                s.field[x][y] = 0;
+            } else {
+                hints--;
+            }
+        }
+    }
+    return s;
 }
 
 #endif // SUS_IMPLEMENTED

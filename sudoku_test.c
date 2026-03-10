@@ -119,6 +119,11 @@ void solve_and_print_sudoku(Sudoku s)
     printf("\n");
 }
 
+int pseudorandom(int n) 
+{
+    return rand() % n;
+}
+
 // -- Performance Tests --
 
 double measure_and_assert_solver(ulong (*F)(Sudoku), Sudoku s, ulong num_solutions) 
@@ -531,9 +536,10 @@ bool test_count_solutions()
 
 int main(int argc, char *argv[])
 {
-    bool test_unit = false;
+    bool test_unit        = true;
     bool test_performance = false;
-    bool test_real = true;
+    bool test_real        = true;
+    bool test_generate    = true;
 
     fprintf(stdout, "Unit test summary:\n");
     if (!test_unit) {
@@ -675,6 +681,30 @@ int main(int argc, char *argv[])
         solve_and_print_sudoku(s);
         
         fprintf(stdout, "\n\n");
+    }
+
+    fprintf(stdout, "Generate sudokus: \n");
+    if (!test_generate) {
+        fprintf(stdout, "skipped.\n\n");
+    } else {
+        fprintf(stdout, "\n");
+
+        srand(time(0));
+
+        Sudoku s_4x4 = sus_generate_sudoku(4, 2, 4, pseudorandom);
+        sudoku_print(s_4x4);
+        fprintf(stdout, "Solutions: %ld\n", sus_count_solutions(s_4x4));
+        solve_and_print_sudoku(s_4x4);
+
+        Sudoku s_9x9 = sus_generate_sudoku(9, 3, 15, pseudorandom);
+        sudoku_print(s_9x9);
+        fprintf(stdout, "Solutions: %ld\n", sus_count_solutions(s_9x9));
+        solve_and_print_sudoku(s_9x9);
+
+        Sudoku s_16x16 = sus_generate_sudoku(16, 4, 40, pseudorandom);
+        sudoku_print(s_16x16);
+        fprintf(stdout, "Solutions: %ld\n", sus_count_solutions(s_16x16));
+        solve_and_print_sudoku(s_16x16);
     }
 
     return 0;
