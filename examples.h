@@ -5,9 +5,8 @@
  | Dependencies: sudoku.h
  ----------------------*/
 
-void copy_board_to_sudoku(char board[9][9], Sudoku s) 
+void copy_board_to_sudoku(int N, char board[N][N], Sudoku s) 
 {
-    int N = 9;
     for (int i=0; i<N; i++) {
         for (int j=0; j<N; j++) {
             s.field[i][j] = board[i][j];
@@ -30,7 +29,7 @@ void copy_board_to_sudoku(char board[9][9], Sudoku s)
             { 0,8,0, 4,0,9, 6,0,5 },                      \
             { 3,0,0, 0,8,0, 1,7,9 },                      \
         };                                                \
-        copy_board_to_sudoku(board, *s);                  \
+        copy_board_to_sudoku(9, board, *s);               \
     } while (0)
 
 #define sudoku_example_medium(s)                          \
@@ -48,7 +47,7 @@ void copy_board_to_sudoku(char board[9][9], Sudoku s)
             { 2,8,7, 4,1,9, 6,3,5 },                      \
             { 3,0,0, 0,8,0, 1,7,9 },                      \
         };                                                \
-        copy_board_to_sudoku(board, *s);                  \
+        copy_board_to_sudoku(9, board, *s);               \
     } while (0)
 
 #define sudoku_example_very_hard(s)                       \
@@ -66,7 +65,7 @@ void copy_board_to_sudoku(char board[9][9], Sudoku s)
             { 0,0,0, 2,0,0, 0,5,0 },                      \
             { 0,0,1, 0,0,0, 0,0,0 },                      \
         };                                                \
-        copy_board_to_sudoku(board, *s);                  \
+        copy_board_to_sudoku(9, board, *s);               \
     } while (0)
 
 #define sudoku_example_hard(s)                            \
@@ -84,7 +83,7 @@ void copy_board_to_sudoku(char board[9][9], Sudoku s)
             { 0,0,0, 0,0,0, 0,2,0 },                      \
             { 0,0,0, 0,1,0, 5,4,0 },                      \
         };                                                \
-        copy_board_to_sudoku(board, *s);                  \
+        copy_board_to_sudoku(9, board, *s);               \
     } while (0)
 
 #define sudoku_example_multiple_solutions(s)              \
@@ -102,7 +101,7 @@ void copy_board_to_sudoku(char board[9][9], Sudoku s)
             { 0,0,0, 0,0,0, 0,2,0 },                      \
             { 0,0,0, 0,1,0, 5,4,0 },                      \
         };                                                \
-        copy_board_to_sudoku(board, *s);                  \
+        copy_board_to_sudoku(9, board, *s);               \
     } while (0)
 
 #define sudoku_example_even_more_solutions(s)             \
@@ -120,7 +119,7 @@ void copy_board_to_sudoku(char board[9][9], Sudoku s)
             { 0,0,0, 0,0,0, 0,2,0 },                      \
             { 0,0,0, 0,0,0, 0,0,3 },                      \
         };                                                \
-        copy_board_to_sudoku(board, *s);                  \
+        copy_board_to_sudoku(9, board, *s);               \
     } while (0)
 
 #define sudoku_example_no_solutions(s)                    \
@@ -138,7 +137,7 @@ void copy_board_to_sudoku(char board[9][9], Sudoku s)
             { 0,0,0, 0,0,0, 3,1,0 },                      \
             { 3,0,0, 0,0,0, 5,4,1 },                      \
         };                                                \
-        copy_board_to_sudoku(board, *s);                  \
+        copy_board_to_sudoku(9, board, *s);               \
     } while (0)
 
 #define sudoku_example_wrong(s)                           \
@@ -156,5 +155,47 @@ void copy_board_to_sudoku(char board[9][9], Sudoku s)
             { 8,1,7, 2,9,4, 3,5,6 },                      \
             { 5,6,2, 1,3,7, 4,9,2 },                      \
         };                                                \
-        copy_board_to_sudoku(board, *s);                  \
+        copy_board_to_sudoku(9, board, *s);               \
+    } while (0)
+
+
+#define sudoku_example_4x4(s)                             \
+    do                                                    \
+    {                                                     \
+        *(s) = (Sudoku) sudoku_create_empty(4, 2);        \
+        static char board[4][4] = {                       \
+            { 0,0, 4,1 },                                 \
+            { 1,0, 0,0 },                                 \
+            { 0,0, 0,2 },                                 \
+            { 2,1, 0,4 },                                 \
+        };                                                \
+        copy_board_to_sudoku(4, board, *s);               \
+    } while (0)
+
+#define sudoku_example_16x16(s)                                                              \
+    do                                                                                       \
+    {                                                                                        \
+        *(s) = (Sudoku) sudoku_create_empty(16, 4);                                          \
+        static char board[16][16] = {                                                        \
+            {  0,  1,  0,  0,     9,  0,  0,  6,    0, 10,  0, 11,    0,  8,  0,  0 },       \
+            { 16,  2,  6, 10,    15,  0,  0,  0,    8,  0,  9,  0,    0,  7, 11,  0 },       \
+            {  0,  0, 13,  8,    14,  1,  0, 11,    0,  0, 15,  5,   16,  6,  0,  2 },       \
+            { 11,  0,  7, 12,     0,  3,  0, 10,    0,  6,  0,  0,    0,  1,  0,  0 },       \
+                                                                                             \
+            {  0,  9,  0,  4,     2,  0,  3,  0,    6,  0,  5,  0,    0,  0,  0, 16 },       \
+            {  0, 15,  0,  0,     0,  9, 16,  5,    2,  0,  8, 10,   11, 12, 14,  0 },       \
+            { 13,  0,  2,  5,     8, 10,  0,  0,    0, 16,  1,  0,    9, 15,  0,  3 },       \
+            {  8,  6, 10,  0,    13, 14, 11,  7,    9,  0, 12,  3,    1,  5,  0,  0 },       \
+                                                                                             \
+            {  0,  0,  4,  1,    12, 13,  0,  2,   10, 11,  3,  9,    0, 16,  5,  8 },       \
+            { 10,  0, 16, 13,     0,  6,  5,  0,    0,  0,  7, 12,    2, 14,  0, 15 },       \
+            {  0,  5,  9,  2,     3, 16,  0,  4,   15,  8,  6,  0,    0,  0,  1,  0 },       \
+            {  6,  0,  0,  0,     0,  8,  0, 15,    0,  2,  0, 16,    4,  0,  9,  0 },       \
+                                                                                             \
+            {  0,  0, 15,  0,     0,  0, 13,  0,    3,  0, 11,  0,   10,  9,  0,  5 },       \
+            {  7,  0,  1,  6,     5,  4,  0,  0,   16,  0, 10, 15,   14,  2,  0,  0 },       \
+            {  0, 10,  5,  0,     0, 12,  0,  8,    0,  0,  0, 14,   13,  4, 16,  1 },       \
+            {  0,  0,  8,  0,    10,  0,  1,  0,   13,  0,  0,  6,    0,  0, 12,  0 },       \
+        };                                                                                   \
+        copy_board_to_sudoku(16, board, *s);                                                 \
     } while (0)

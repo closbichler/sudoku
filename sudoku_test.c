@@ -21,6 +21,7 @@ void sudoku_print(Sudoku s)
     if (sudoku_is_valid(s)) fprintf(stdout, "[valid] ");
     else                    fprintf(stdout, "[invalid] ");
     fprintf(stdout, "Sudoku %dx%d with block-size %d\n", s.size, s.size, s.block_size);
+
     for (int i=0; i<s.size; i++) {
         if (i % s.block_size == 0) {
             fprintf(stdout, "|");
@@ -109,39 +110,13 @@ void sus_dlx_print_columns(DLXColumn *root)
     } while (c != root);
 }
 
-// -- Random test --
+// -- Solve real sudokus --
 
-int pseudorandom(int n) 
+void solve_and_print_sudoku(Sudoku s) 
 {
-    return rand() % n;
-}
-
-void generate_and_solve_random_sudoku(int hints, int max_attempts) 
-{
-    fprintf(stdout, "Generating random sudoku with %d hints.\n", hints);
-    fprintf(stdout, "attempt ");
-
-    srand(time(0));
-
-    Sudoku s = {0};
-    int attempts = 0;
-    while (attempts < max_attempts) {
-        attempts++;
-        fprintf(stdout, "%d..", attempts);
-        fflush(stdout);
-        s = sudoku_create(9, 3, pseudorandom, hints);
-        int solutions = sus_count_solutions(s);
-        if (solutions == 1) break;
-    }
-    if (attempts >= max_attempts) {
-        fprintf(stdout, "\nfailed after %d attempts.\n", max_attempts);
-        return;
-    }
-
-    fprintf(stdout, "it worked.\n");
-    sudoku_print(s);
     sus_solve_sudoku(&s);
     sudoku_print(s);   
+    printf("\n");
 }
 
 // -- Performance Tests --
@@ -556,9 +531,9 @@ bool test_count_solutions()
 
 int main(int argc, char *argv[])
 {
-    bool test_unit = true;
-    bool test_performance = true;
-    bool test_random = argc > 1;
+    bool test_unit = false;
+    bool test_performance = false;
+    bool test_real = true;
 
     fprintf(stdout, "Unit test summary:\n");
     if (!test_unit) {
@@ -682,12 +657,23 @@ int main(int argc, char *argv[])
         fprintf(stdout, "\n\n");
     }
   
-    fprintf(stdout, "Random sudoku test: \n");
-    if (!test_random) {
+    fprintf(stdout, "Real sudoku tests: \n");
+    if (!test_real) {
         fprintf(stdout, "skipped.\n\n");
     } else {
         fprintf(stdout, "\n");
-        generate_and_solve_random_sudoku(19, 30);
+
+        Sudoku s = {0};
+
+        sudoku_example_hard(&s);
+        solve_and_print_sudoku(s);
+        
+        sudoku_example_4x4(&s);
+        solve_and_print_sudoku(s);
+
+        sudoku_example_16x16(&s);
+        solve_and_print_sudoku(s);
+        
         fprintf(stdout, "\n\n");
     }
 

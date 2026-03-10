@@ -9,4 +9,4 @@ web: sudoku.h sus.h examples.h
 	wasm-ld --no-entry -o ./public/sudoku.wasm sus_glue.o walloc.o
 
 clean: 
-	rm -f sudoku_test sus_glue.o walloc.o public/sudoku.wasm
+	rm -f sudoku_test sus_glue.o walloc.o public/sudoku.wasm sudoku_test.su

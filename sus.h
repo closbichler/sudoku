@@ -88,6 +88,25 @@ typedef struct {
     size_t capacity;
 } ColumnArray;
 
+typedef struct SetCoverHashEntry SetCoverHashEntry;
+
+struct SetCoverHashEntry {
+    long hash;
+    ulong solutions;
+    SetCoverHashEntry* next;
+};
+
+typedef struct {
+    SetCoverHashEntry* items;
+    size_t capacity;
+    size_t count;
+} SetCoverHashTable;
+
+// Global variables for dynamic programming table and flag to enable/disable it
+// TODO: rework, cause it slows down than speeds up
+SetCoverHashTable table;
+int ff_dynamic_programming = 0;
+
 // -- DA Macros from www.github.com/tsoding/nob.h --
 
 #define da_reserve(da, expected_capacity)                                              \
@@ -560,23 +579,6 @@ DLXColumn* sus_dlx_get_shortest_column(DLXColumn *root)
     return shortest_column;
 }
 
-typedef struct SetCoverHashEntry SetCoverHashEntry;
-
-struct SetCoverHashEntry {
-    long hash;
-    ulong solutions;
-    SetCoverHashEntry* next;
-};
-
-typedef struct {
-    SetCoverHashEntry* items;
-    size_t capacity;
-    size_t count;
-} SetCoverHashTable;
-
-SetCoverHashTable table;
-int ff_dynamic_programming = 0;
-
 long sus_hash_setcover(SetCover setcover)
 {
     long hash = 1;
@@ -731,7 +733,7 @@ int sus_solve_sudoku(Sudoku *s)
 {
     if (!sudoku_is_valid(*s)) return 0;
 
-    Matrix sets = sus_create_sudoku_constraint_sets(9, 3);    
+    Matrix sets = sus_create_sudoku_constraint_sets(s->size, s->block_size);    
     DLXColumn *root = sus_dlx_matrix_to_linked_list(sets);
     
     for (int i=0; i<s->size; i++) {
@@ -761,7 +763,7 @@ ulong sus_count_solutions(Sudoku s)
 {
     if (!sudoku_is_valid(s)) return 0;
 
-    Matrix sets = sus_create_sudoku_constraint_sets(9, 3);    
+    Matrix sets = sus_create_sudoku_constraint_sets(s.size, s.block_size);    
     DLXColumn *root = sus_dlx_matrix_to_linked_list(sets);
 
     for (int i=0; i<s.size; i++) {
