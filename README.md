@@ -33,3 +33,4 @@ The implementation contains one simple recursive greedy algorithm and a reductio
 - https://github.com/wingo/walloc
 - https://github.com/rob-blackbourn/example-wasm-array-passing
 - https://blog.wolfram.com/2020/06/02/using-integer-optimization-to-build-and-solve-sudoku-games-with-the-wolfram-language%C2%A0/
+- https://github.com/kevquirk/simple.css

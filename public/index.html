@@ -1,30 +1,70 @@
 <!DOCTYPE html>
 <head>
-  <title>Sudoku</title>
-  <link rel="stylesheet" type="text/css" href="main.css">
+  <title>Sudoku Solver</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="spectre.min.css">
+  <link rel="stylesheet" href="main.css">
 </head>
 <body>
-  <div id="app">
-    <div id="sudoku-container"></div>
+  <div class="container grid-lg" id="app">
     
-    <div id="controls">
-      <input type="button" id="solve-button" value="Solve">
-      <input type="button" id="clear-button" value="Clear">
-      
-      <select id="type-select">
-        <option value="easy">easy</option>
-        <option value="medium">medium</option>
-        <option value="hard">hard</option>
-        <option value="very-hard">very hard</option>
-        <option value="multiple-solutions">multiple solutions</option>
-      </select>
-      <input type="button" id="new-button" value="New">
-      
-      <br>
+    <div id="controls-top">
+      <div id="control-board" class="columns col-gapless form-horizontal">
+        
+        <div class="column col-3 form-group m-0">
+          <label for="size-input" class="form-label">Size</label>
+          <input type="number" id="size-input" value="9" min="1" max="125" class="form-input">
+        </div>
 
-      <input type="button" id="count-button" value="Count solutions">
-      <span id="solution-count"></span>
+        <div class="column col-3 form-group m-0">
+          <label for="blocksize-input" class="form-label">Block Size</label>
+          <input type="number" id="blocksize-input" value="3" min="1" max="25" class="form-input">
+        </div>
+
+        <div class="column col-3 form-group" style="">
+          <label class="form-label">&nbsp;</label>
+          <button id="generate-button" class="btn btn-primary btn-block">Generate</button>
+        </div>
+        
+      </div>
+      
+      <div id="control-sudoku" class="columns col-gapless">
+        
+        <div class="column col-3 form-group">
+          <label class="form-label">Difficulty</label>
+          <select id="type-select" class="form-select">
+            <option value="easy">easy</option>
+            <option value="medium">medium</option>
+            <option value="hard">hard</option>
+            <option value="very-hard">very hard</option>
+            <option value="multiple-solutions">multiple solutions</option>
+          </select>
+        </div>
+        
+        <div class="column col-2">
+          <label class="form-label">&nbsp;</label>
+          <button id="new-button" class="btn btn-primary btn-block">New</button>
+        </div>
+        
+        <div class="column col-2">
+          <label class="form-label">&nbsp;</label>
+          <button id="clear-button" class="btn btn-block">Clear</button>
+        </div>
+
+      </div>
     </div>
+
+    <div id="sudoku-container" class=""></div>
+
+    <div id="controls-bottom" class="">
+      <div>
+        <button id="solve-button" class="btn btn-success">Solve</button>
+        <button id="count-button" class="btn">Count solutions</button>
+        <span id="solution-count" class=""></span>
+      </div>
+    </div>
+
   </div>
+
   <script src="main.js"></script>
 </body>
