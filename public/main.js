@@ -59,9 +59,18 @@ function createSudokuHtml(board) {
       let cell = document.createElement("input");
       cell.type = "text";
       cell.className = "sudoku-cell";
+      if (i % board.b == 0) cell.className += " sudoku-bt";
+      if (j % board.b == 0) cell.className += " sudoku-bl";
+      if (i == board.n - 1) cell.className += " sudoku-bb";
+      if (j == board.n - 1) cell.className += " sudoku-br";
       cell.oninput = (e) => {
-        game.board.field[i][j] = parseInt(e.target.value) || 0;
+            cell.value = e.data;
+            game.board.field[i][j] = parseInt(cell.value) || 0;
       }
+      // TODO
+      cell.onkeydown = (e) => {}
+      cell.onkeyup = (e) => {}
+      if (i == 0 && j == 0) cell.setAttribute("autofocus", true);
       row.appendChild(cell);
     }
     container.appendChild(row);

@@ -1,7 +1,7 @@
 html {
     overflow-y: hidden;
     background:#bcc3ce;
-    }
+}
 
 #app {
     position: absolute;
@@ -32,7 +32,30 @@ html {
 .sudoku-cell {
     position: relative;
     width: calc(100% / 9 - 1px);
-    height: calc(100% - 0.5px);
+    height: calc(100%);
     border: 0.5px solid black;
     padding: 0;
+    text-align: center;
+}
+
+.sudoku-cell:focus {
+    outline: none;
+    background-color: rgb(172, 168, 212);
+    transition: linear 100ms;
+}
+
+.sudoku-br {
+    border-right: 3px solid black;
+}
+
+.sudoku-bt {
+    border-top: 3px solid black;
+}
+
+.sudoku-bl {
+    border-left: 3px solid black;
+}
+
+.sudoku-bb {
+    border-bottom: 3px solid black;
 }
