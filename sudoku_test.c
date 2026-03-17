@@ -428,7 +428,7 @@ bool test_solve_exact_cover_1(SetCover expected_cover)
     DLXColumn *root = sus_dlx_matrix_to_linked_list(sets);
 
     sus_create_setcover_hashtable(16);
-    int result = sus_dlx_solve_exact_cover(root, &cover, true);
+    int result = sus_dlx_solve_exact_cover(root, &cover, true, -1);
     if (result != 1) return false;
     if (!set_covers_equal(expected_cover, cover)) return false;
     return true;
@@ -450,7 +450,7 @@ bool test_solve_exact_cover_2(SetCover expected_cover)
     DLXColumn *root = sus_dlx_matrix_to_linked_list(sets);
 
     sus_create_setcover_hashtable(16);
-    int result = sus_dlx_solve_exact_cover(root, &cover, true);
+    int result = sus_dlx_solve_exact_cover(root, &cover, true, -1);
     if (result != 1) return false;
     if (!set_covers_equal(expected_cover, cover)) return false;
     return true;
@@ -471,7 +471,7 @@ bool test_solve_exact_cover_3(SetCover expected_cover)
     SetCover cover = {0};
     DLXColumn *root = sus_dlx_matrix_to_linked_list(sets);
 
-    int result = sus_dlx_solve_exact_cover(root, &cover, true);
+    int result = sus_dlx_solve_exact_cover(root, &cover, true, -1);
     if (result != 1) return false;
     if (!set_covers_equal(expected_cover, cover)) return false;
     return true;
@@ -493,7 +493,7 @@ bool test_solve_exact_cover_incomplete(SetCover expected_cover)
     DLXColumn *root = sus_dlx_matrix_to_linked_list(sets);
 
     sus_create_setcover_hashtable(16);
-    int result = sus_dlx_solve_exact_cover(root, &cover, true);
+    int result = sus_dlx_solve_exact_cover(root, &cover, true, -1);
     if (result != 0) return false;
     if (!set_covers_equal(expected_cover, cover)) return false;
     return true;
@@ -691,20 +691,20 @@ int main(int argc, char *argv[])
 
         srand(time(0));
 
-        Sudoku s_4x4 = sus_generate_sudoku(4, 2, 4, pseudorandom);
+        Sudoku s_4x4 = sus_generate_sudoku(4, 2, 5);
         sudoku_print(s_4x4);
         fprintf(stdout, "Solutions: %ld\n", sus_count_solutions(s_4x4));
         solve_and_print_sudoku(s_4x4);
 
-        Sudoku s_9x9 = sus_generate_sudoku(9, 3, 15, pseudorandom);
+        Sudoku s_9x9 = sus_generate_sudoku(9, 3, 26);
         sudoku_print(s_9x9);
         fprintf(stdout, "Solutions: %ld\n", sus_count_solutions(s_9x9));
         solve_and_print_sudoku(s_9x9);
 
-        Sudoku s_16x16 = sus_generate_sudoku(16, 4, 40, pseudorandom);
-        sudoku_print(s_16x16);
-        fprintf(stdout, "Solutions: %ld\n", sus_count_solutions(s_16x16));
-        solve_and_print_sudoku(s_16x16);
+        // Sudoku s_16x16 = sus_generate_sudoku(16, 4, 16*16);
+        // sudoku_print(s_16x16);
+        // fprintf(stdout, "Solutions: %ld\n", sus_count_solutions(s_16x16));
+        // solve_and_print_sudoku(s_16x16);
     }
 
     return 0;

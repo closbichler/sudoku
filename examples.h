@@ -5,7 +5,7 @@
  | Dependencies: sudoku.h
  ----------------------*/
 
-void copy_board_to_sudoku(int N, char board[N][N], Sudoku s) 
+void copy_board_to_sudoku(int N, uint8_t board[N][N], Sudoku s) 
 {
     for (int i=0; i<N; i++) {
         for (int j=0; j<N; j++) {
@@ -18,7 +18,7 @@ void copy_board_to_sudoku(int N, char board[N][N], Sudoku s)
     do                                                    \
     {                                                     \
         *(s) = (Sudoku) sudoku_create_empty(9, 3);        \
-        static char board[9][9] = {                       \
+        static uint8_t board[9][9] = {                       \
             { 5,3,4, 6,0,8, 9,1,2 },                      \
             { 6,0,0, 0,9,5, 3,0,0 },                      \
             { 0,0,8, 0,4,0, 5,6,7 },                      \
@@ -36,7 +36,7 @@ void copy_board_to_sudoku(int N, char board[N][N], Sudoku s)
     do                                                    \
     {                                                     \
         *(s) = (Sudoku) sudoku_create_empty(9, 3);        \
-        static char board[9][9] = {                       \
+        static uint8_t board[9][9] = {                       \
             { 5,3,4, 6,0,8, 0,1,2 },                      \
             { 0,7,0, 1,0,5, 0,4,0 },                      \
             { 1,9,8, 0,4,0, 5,6,0 },                      \
@@ -54,7 +54,7 @@ void copy_board_to_sudoku(int N, char board[N][N], Sudoku s)
     do                                                    \
     {                                                     \
         *(s) = (Sudoku) sudoku_create_empty(9, 3);        \
-        static char board[9][9] = {                       \
+        static uint8_t board[9][9] = {                       \
             { 0,0,0, 0,0,9, 0,0,0 },                      \
             { 4,7,0, 0,0,0, 0,2,0 },                      \
             { 0,5,0, 0,0,1, 0,0,0 },                      \
@@ -72,7 +72,7 @@ void copy_board_to_sudoku(int N, char board[N][N], Sudoku s)
     do                                                    \
     {                                                     \
         *(s) = (Sudoku) sudoku_create_empty(9, 3);        \
-        static char board[9][9] = {                       \
+        static uint8_t board[9][9] = {                       \
             { 0,2,6, 0,0,0, 0,0,3 },                      \
             { 0,0,0, 0,0,0, 0,0,0 },                      \
             { 7,0,0, 0,4,8, 0,6,0 },                      \
@@ -90,7 +90,7 @@ void copy_board_to_sudoku(int N, char board[N][N], Sudoku s)
     do                                                    \
     {                                                     \
         *(s) = (Sudoku) sudoku_create_empty(9, 3);        \
-        static char board[9][9] = {                       \
+        static uint8_t board[9][9] = {                       \
             { 0,0,6, 0,0,0, 0,0,3 },                      \
             { 0,0,0, 0,0,0, 0,0,0 },                      \
             { 7,0,0, 0,4,8, 0,6,0 },                      \
@@ -108,7 +108,7 @@ void copy_board_to_sudoku(int N, char board[N][N], Sudoku s)
     do                                                    \
     {                                                     \
         *(s) = (Sudoku) sudoku_create_empty(9, 3);        \
-        static char board[9][9] = {                       \
+        static uint8_t board[9][9] = {                       \
             { 1,4,5, 0,0,0, 0,0,0 },                      \
             { 0,2,0, 0,0,0, 0,0,0 },                      \
             { 0,0,3, 0,0,0, 0,0,0 },                      \
@@ -126,7 +126,7 @@ void copy_board_to_sudoku(int N, char board[N][N], Sudoku s)
     do                                                    \
     {                                                     \
         *(s) = (Sudoku) sudoku_create_empty(9, 3);        \
-        static char board[9][9] = {                       \
+        static uint8_t board[9][9] = {                       \
             { 1,0,6, 0,0,0, 0,0,3 },                      \
             { 0,1,0, 0,0,0, 0,0,0 },                      \
             { 7,0,1, 0,4,8, 0,6,0 },                      \
@@ -144,7 +144,7 @@ void copy_board_to_sudoku(int N, char board[N][N], Sudoku s)
     do                                                    \
     {                                                     \
         *(s) = (Sudoku) sudoku_create_empty(9, 3);        \
-        static char board[9][9] = {                       \
+        static uint8_t board[9][9] = {                       \
             { 1,2,3, 4,7,9, 8,6,5 },                      \
             { 4,7,6, 3,8,5, 9,2,1 },                      \
             { 9,5,8, 6,2,1, 7,3,4 },                      \
@@ -163,7 +163,7 @@ void copy_board_to_sudoku(int N, char board[N][N], Sudoku s)
     do                                                    \
     {                                                     \
         *(s) = (Sudoku) sudoku_create_empty(4, 2);        \
-        static char board[4][4] = {                       \
+        static uint8_t board[4][4] = {                       \
             { 0,0, 4,1 },                                 \
             { 1,0, 0,0 },                                 \
             { 0,0, 0,2 },                                 \
@@ -176,7 +176,7 @@ void copy_board_to_sudoku(int N, char board[N][N], Sudoku s)
     do                                                                                       \
     {                                                                                        \
         *(s) = (Sudoku) sudoku_create_empty(16, 4);                                          \
-        static char board[16][16] = {                                                        \
+        static uint8_t board[16][16] = {                                                        \
             {  0,  1,  0,  0,     9,  0,  0,  6,    0, 10,  0, 11,    0,  8,  0,  0 },       \
             { 16,  2,  6, 10,    15,  0,  0,  0,    8,  0,  9,  0,    0,  7, 11,  0 },       \
             {  0,  0, 13,  8,    14,  1,  0, 11,    0,  0, 15,  5,   16,  6,  0,  2 },       \

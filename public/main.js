@@ -52,6 +52,7 @@ function printBoard(board) {
 
 function createSudokuHtml(board) {
   let container = document.getElementById("sudoku-container");
+  container.innerHTML = "";
   for (let i = 0; i < board.n; i++) {
     let row = document.createElement("div");
     row.className = "sudoku-row";
@@ -88,9 +89,13 @@ function updateSudokuHtml(board) {
   }
 }
 
+function rand(max) {
+  return parseInt(Math.floor(Math.random() * max) + 1);
+}
+
 async function init() {
   const wasmModule = await WebAssembly.instantiateStreaming(fetch("./sudoku.wasm"), {
-    env: { },
+    env: { rand: rand },
   })
   wasmInstance = wasmModule.instance
 
@@ -100,38 +105,47 @@ async function init() {
     let result = wasmInstance.exports.export_solve_sudoku(game.board.ptr)
     console.log(result)
     game.board = sudokuPtrToBoard(game.board.ptr);
-    printBoard(game.board);
     updateSudokuHtml(game.board);
   })
 
-  document.getElementById("clear-button").addEventListener("click", (e) => {
-    game.board = sudokuPtrToBoard(wasmInstance.exports.export_sudoku_create_empty(9, 3));
-    printBoard(game.board);
-    updateSudokuHtml(game.board);
-  })
+  document.getElementById("generate-button").addEventListener("click", (e) => {
+    let size = game.board.n;
+    let blockSize = game.board.b;
+    let newBoardPtr = wasmInstance.exports.export_generate_sudoku(size, blockSize, blockSize * blockSize + size);
 
-  document.getElementById("new-button").addEventListener("click", (e) => {
-    let type = document.getElementById("type-select").value
-    let newBoardPtr = 0
-    switch (type) {
-      case "easy":               newBoardPtr = wasmInstance.exports.export_sudoku_example_easy(0); break;
-      case "medium":             newBoardPtr = wasmInstance.exports.export_sudoku_example_medium(0); break;
-      case "hard":               newBoardPtr = wasmInstance.exports.export_sudoku_example_hard(0); break;
-      case "very-hard":          newBoardPtr = wasmInstance.exports.export_sudoku_example_very_hard(0); break;
-      case "multiple-solutions": newBoardPtr = wasmInstance.exports.export_sudoku_example_multiple_solutions(0); break;
-      default: console.log("Invalid type selected"); break;
-    }
+    // switch (type) {
+    //   case "easy":               newBoardPtr = wasmInstance.exports.export_sudoku_example_easy(0); break;
+    //   case "medium":             newBoardPtr = wasmInstance.exports.export_sudoku_example_medium(0); break;
+    //   case "hard":               newBoardPtr = wasmInstance.exports.export_sudoku_example_hard(0); break;
+    //   case "very-hard":          newBoardPtr = wasmInstance.exports.export_sudoku_example_very_hard(0); break;
+    //   case "multiple-solutions": newBoardPtr = wasmInstance.exports.export_sudoku_example_multiple_solutions(0); break;
+    //   default: console.log("Invalid type selected"); break;
+    // }
+
     game.board = sudokuPtrToBoard(newBoardPtr);
-    printBoard(game.board);
     updateSudokuHtml(game.board);
   })
 
   document.getElementById("count-button").addEventListener("click", (e) => {
     let count = wasmInstance.exports.export_count_solutions(game.board.ptr)
-    let text = count > 1000000 ? "Number of solutions: > 1 million" : "Number of solutions: " + count;
+    let text = count > 100000 ? "Number of solutions: > 100.000" : "Number of solutions: " + count;
 
     document.getElementById("solution-count").textContent = text;
-    console.log(text)
+  })
+
+  document.getElementById("clear-button").addEventListener("click", (e) => {
+    let size = game.board.n;
+    let blockSize = game.board.b;
+    game.board = sudokuPtrToBoard(wasmInstance.exports.export_sudoku_create_empty(size, blockSize));
+    updateSudokuHtml(game.board);
+  })
+
+  document.getElementById("blank-board-button").addEventListener("click", (e) => {
+    let size = document.getElementById("size-input").value;
+    let blockSize = document.getElementById("blocksize-input").value;
+    game.board = sudokuPtrToBoard(wasmInstance.exports.export_sudoku_create_empty(size, blockSize));
+    createSudokuHtml(game.board);
+    updateSudokuHtml(game.board);
   })
 
   createSudokuHtml(game.board);

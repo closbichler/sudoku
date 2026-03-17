@@ -6,10 +6,10 @@
   <link rel="stylesheet" href="main.css">
 </head>
 <body>
-  <div class="container grid-lg" id="app">
+  <div class="container" id="app">
     
     <div id="controls-top">
-      <div id="control-board" class="columns col-gapless form-horizontal">
+      <div id="control-board" class="columns form-horizontal">
         
         <div class="column col-3 form-group m-0">
           <label for="size-input" class="form-label">Size</label>
@@ -21,18 +21,9 @@
           <input type="number" id="blocksize-input" value="3" min="1" max="25" class="form-input">
         </div>
 
-        <div class="column col-3 form-group" style="">
-          <label class="form-label">&nbsp;</label>
-          <button id="generate-button" class="btn btn-primary btn-block">Generate</button>
-        </div>
-        
-      </div>
-      
-      <div id="control-sudoku" class="columns col-gapless">
-        
         <div class="column col-3 form-group">
           <label class="form-label">Difficulty</label>
-          <select id="type-select" class="form-select">
+          <select id="type-select" class="form-select" disabled>
             <option value="easy">easy</option>
             <option value="medium">medium</option>
             <option value="hard">hard</option>
@@ -40,15 +31,22 @@
             <option value="multiple-solutions">multiple solutions</option>
           </select>
         </div>
-        
-        <div class="column col-2">
+      </div>
+      
+      <div id="control-sudoku" class="columns">
+        <div class="column col-3 form-group" style="">
           <label class="form-label">&nbsp;</label>
-          <button id="new-button" class="btn btn-primary btn-block">New</button>
+          <button id="blank-board-button" class="btn btn-primary btn-block">Create a blank board</button>
+        </div>
+
+        <div class="column col-3">
+          <label class="form-label">&nbsp;</label>
+          <button id="generate-button" class="btn btn-primary btn-block">Generate a new unique sudoku</button>
         </div>
         
-        <div class="column col-2">
+        <div class="column col-3">
           <label class="form-label">&nbsp;</label>
-          <button id="clear-button" class="btn btn-block">Clear</button>
+          <button id="clear-button" class="btn btn-block">Clear board</button>
         </div>
 
       </div>

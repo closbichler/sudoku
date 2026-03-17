@@ -14,6 +14,7 @@
 
 #ifndef size_t
 typedef __SIZE_TYPE__ size_t;
+typedef unsigned char uint8_t;
 typedef unsigned long int ulong;
 #endif // size_t
 
@@ -24,11 +25,10 @@ void free(void *p);
 typedef struct {
     int size;
     int block_size;
-    char** field;
+    uint8_t** field;
 } Sudoku;
 
 Sudoku sudoku_create_empty(int size, int block_size);
-Sudoku sudoku_create(int size, int block_size, int (rand)(int n), int hints);
 Sudoku sudoku_clone(Sudoku s);
 
 int    sudoku_is_valid(Sudoku s);
@@ -47,14 +47,14 @@ Sudoku sudoku_create_empty(int size, int block_size)
         .size = size,
         .block_size = block_size
     };
-    s.field = (char**) malloc(sizeof(char*) * size);
+    s.field = (uint8_t**) malloc(sizeof(uint8_t*) * size);
     if (s.field == NULL) {
         // Allocation failed
         return (Sudoku) { 0 };
     }
 
     for (int i=0; i<s.size; i++) {
-        s.field[i] = (char*) malloc(sizeof(char) * size);
+        s.field[i] = (uint8_t*) malloc(sizeof(uint8_t) * size);
         if (s.field[i] == NULL) {
             // Allocation failed
             return (Sudoku) { 0 };
@@ -62,25 +62,6 @@ Sudoku sudoku_create_empty(int size, int block_size)
 
         for (int j=0; j<s.size; j++) {
             s.field[i][j] = 0;
-        }
-    }
-    return s;
-}
-
-Sudoku sudoku_create(int size, int block_size, int (rand)(int n), int hints) 
-{
-    Sudoku s = sudoku_create_empty(size, block_size);
-    while (hints > 0) {
-        int x = rand(s.size);       
-        int y = rand(s.size);
-        char val = rand(s.size) + 1;
-        if (s.field[x][y] == 0) {
-            s.field[x][y] = val;
-            if (!sudoku_is_valid(s)) {
-                s.field[x][y] = 0;
-            } else {
-                hints--;
-            }
         }
     }
     return s;

@@ -16,6 +16,7 @@
 
 #ifndef size_t
 typedef __SIZE_TYPE__ size_t;
+typedef unsigned char uint8_t;
 typedef unsigned long int ulong;
 #endif // size_t
 
@@ -45,7 +46,7 @@ ulong sus_count_solutions_legacy(Sudoku s);
  and fills it with the amount of hints. The sudoku is 
  always solvable (has exactly 1 solution).
 */
-Sudoku sus_generate_sudoku(int size, int block_size, int hints, int (rand)(int));
+Sudoku sus_generate_sudoku(int size, int block_size, int hints);
 
 #endif // SUS_H
 
@@ -78,7 +79,7 @@ typedef struct DLXNode {
    struct DLXNode *left, *right;
    struct DLXNode *up, *down;
    struct DLXColumn *c;
-   char val;
+   uint8_t val;
    int  set_id;
 } DLXNode;
 
@@ -132,8 +133,8 @@ int ff_dynamic_programming = 0;
             }                                                                          \
             if ((da)->items != NULL)                                                   \
             {                                                                          \
-                char *dst = (char *)new_items;                                         \
-                char *src = (char *)(da)->items;                                       \
+                uint8_t *dst = (uint8_t *)new_items;                                         \
+                uint8_t *src = (uint8_t *)(da)->items;                                       \
                 size_t bytes = (da)->count * sizeof(*(da)->items);                     \
                 for (size_t i = 0; i < bytes; ++i) dst[i] = src[i];                    \
                 free((da)->items);                                                     \
@@ -653,7 +654,7 @@ void sus_create_setcover_hashtable(int size) {
     }
 }
 
-ulong sus_dlx_solve_exact_cover(DLXColumn *root, SetCover *cover, int find_first_solution_only)
+ulong sus_dlx_solve_exact_cover(DLXColumn *root, SetCover *cover, int find_first_solution_only, int max_solutions)
 {
     if (root->next == root) return 1;
 
@@ -681,13 +682,12 @@ ulong sus_dlx_solve_exact_cover(DLXColumn *root, SetCover *cover, int find_first
         } while (neighbor != n);
 
         // test solution
-        ulong sub_solutions = sus_dlx_solve_exact_cover(root, cover, find_first_solution_only);
+        ulong sub_solutions = sus_dlx_solve_exact_cover(root, cover, find_first_solution_only, max_solutions);
         solutions += sub_solutions;
         if (sub_solutions > 0 && find_first_solution_only)
             return 1;
 
-        // TODO: not quit after 100.000 solutions, but optimize it and count everything
-        if (solutions > 100000 && !find_first_solution_only)
+        if (max_solutions != -1 && solutions > max_solutions)
             return solutions;
 
         if (ff_dynamic_programming) {
@@ -753,7 +753,7 @@ int sus_solve_sudoku(Sudoku *s)
     }
 
     SetCover cover = {0};
-    if (!sus_dlx_solve_exact_cover(root, &cover, 1)) return 0;
+    if (!sus_dlx_solve_exact_cover(root, &cover, 1, -1)) return 0;
 
     for (int k = 0; k < cover.count; k++) {
         int id = cover.items[k];
@@ -766,7 +766,7 @@ int sus_solve_sudoku(Sudoku *s)
     return 1;
 }
 
-ulong sus_count_solutions(Sudoku s)
+ulong sus_count_solutions_until(Sudoku s, int max_solutions)
 {
     if (!sudoku_is_valid(s)) return 0;
 
@@ -786,22 +786,41 @@ ulong sus_count_solutions(Sudoku s)
     
     SetCover cover = {0};
     da_reserve(&cover, sets.count);
-    return sus_dlx_solve_exact_cover(root, &cover, 0);
+    return sus_dlx_solve_exact_cover(root, &cover, 0, max_solutions);
 }
 
-Sudoku sus_generate_sudoku(int size, int block_size, int hints, int (rand)(int))
+ulong sus_count_solutions(Sudoku s)
+{
+    return sus_count_solutions_until(s, 100000);
+}
+
+uint8_t pseudo_rand(int max) {
+    static long state = 1;
+    state = (state * 12345 + 12345) % 3486509;
+    return ((uint8_t) state) % max;
+}
+
+Sudoku sus_generate_sudoku(int size, int block_size, int hints)
 {
     Sudoku s = sudoku_create_empty(size, block_size);
-    while (hints > 0) {
-        int x = rand(s.size);       
-        int y = rand(s.size);
-        char val = rand(s.size) + 1;
+    int solutions = 0;
+    // TODO: rework
+    int equal_iterations = 0;
+    while (solutions != 1 && hints > 0 && equal_iterations < 100) {
+        int x    = pseudo_rand(size);
+        int y    = pseudo_rand(size);
+        uint8_t val = pseudo_rand(block_size * block_size) + 1;
+        
         if (s.field[x][y] == 0) {
             s.field[x][y] = val;
-            if (!sudoku_is_valid(s)) {
+
+            solutions = sus_count_solutions_until(s, 3);
+            if (solutions == 0) {
                 s.field[x][y] = 0;
+                equal_iterations++;
             } else {
                 hints--;
+                equal_iterations = 0;
             }
         }
     }

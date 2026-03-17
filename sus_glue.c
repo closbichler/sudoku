@@ -31,16 +31,16 @@ Sudoku* WASM_EXPORT(export_sudoku_create_empty)(int n, int b) {
     return s;
 }
 
-Sudoku* WASM_EXPORT(export_sudoku_create)(int size, int block_size, int (rand)(int n), int hints) {
-    Sudoku *s = malloc(sizeof(Sudoku));
-    *s = sudoku_create(size, block_size, rand, hints);
-    return s;
-}
-
 Sudoku* WASM_EXPORT(export_sudoku_clone)(Sudoku s) {
     Sudoku *clone = malloc(sizeof(Sudoku));
     *clone = sudoku_clone(s);
     return clone;
+}
+
+Sudoku* WASM_EXPORT(export_generate_sudoku)(int size, int block_size, int hints) { 
+    Sudoku *s = malloc(sizeof(Sudoku));
+    *s = sus_generate_sudoku(size, block_size, hints); 
+    return s;
 }
 
 int WASM_EXPORT(export_sudoku_is_valid)(Sudoku s)      { return sudoku_is_valid(s); }
@@ -54,4 +54,4 @@ Sudoku* WASM_EXPORT(export_sudoku_example_very_hard)() { Sudoku* s = malloc(size
 Sudoku* WASM_EXPORT(export_sudoku_example_multiple_solutions)() { Sudoku* s = malloc(sizeof(Sudoku)); sudoku_example_multiple_solutions(s); return s; }
 
 int WASM_EXPORT(export_solve_sudoku)(Sudoku* s)        { return sus_solve_sudoku(s); }
-int WASM_EXPORT(export_count_solutions)(Sudoku* s) { return sus_count_solutions(*s); }
+int WASM_EXPORT(export_count_solutions)(Sudoku* s)     { return sus_count_solutions(*s); }

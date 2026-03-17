@@ -1,5 +1,5 @@
 html {
-    overflow-y: hidden;
+    overflow-y: scroll;
     background:#bcc3ce;
 }
 
@@ -14,25 +14,25 @@ html {
 /* sudoku board */
 #sudoku-container {
     position: relative;
-    width: calc(2rem * 9);
-    height: calc(2rem * 9);
+    width: fit-content;
+    aspect-ratio: 1 / 1;
     padding: 0; 
-    margin: 0;
-    overflow: visible;
+    margin: 1rem 0 1rem 0;
+    overflow: scroll;
 }
 
 .sudoku-row {
     position: relative;
     width: 100%;
-    height: calc(100% / 9);
+    height: 2rem;
     left: 0;
     right: 0;
 }
 
 .sudoku-cell {
     position: relative;
-    width: calc(100% / 9 - 1px);
-    height: calc(100%);
+    width: 2rem;
+    height: 2rem;
     border: 0.5px solid black;
     padding: 0;
     text-align: center;
