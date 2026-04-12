@@ -6,6 +6,7 @@
 #include <stdbool.h>
 
 #define SUDOKU_IMPLEMENTATION
+#define EXACT_COVER_DEBUG
 #include "sudoku.h"
 
 #define SUS_IMPLEMENTATION
@@ -59,6 +60,10 @@ int pseudorandom(int n)
 
 // -- Performance Tests --
 
+ulong count_solutions_without_dp_wrapper(Sudoku s) {
+    return sus_count_solutions_until(s, 10000, 0);
+}
+
 double measure_and_assert_solver(ulong (*F)(Sudoku), Sudoku s, ulong num_solutions) 
 {
     clock_t start, end;
@@ -75,18 +80,21 @@ double measure_and_assert_solver(ulong (*F)(Sudoku), Sudoku s, ulong num_solutio
     return cpu_time_used;
 }
 
-void print_performance_row(const char *name, double a, double b)
+void print_performance_row(const char *name, double a, double b, double c)
 {
     const char *color = "\x1b[36m"; // cyan
     const char *reset = "\x1b[0m";
     char s0[64], s1[64];
+    char s2[64];
 
     if (a == 0) snprintf(s0, sizeof s0, "N/A");
     else        snprintf(s0, sizeof s0, "%.4fs", a);
     if (b == 0) snprintf(s1, sizeof s1, "N/A");
     else        snprintf(s1, sizeof s1, "%.4fs", b);
+    if (c == 0) snprintf(s2, sizeof s2, "N/A");
+    else        snprintf(s2, sizeof s2, "%.4fs", c);
 
-    int pos1 = 35, pos2 = 56;
+    int pos1 = 35, pos2 = 56, pos3 = 79;
     int cur = 0;
 
     fprintf(stdout, "%s ", name);
@@ -97,6 +105,9 @@ void print_performance_row(const char *name, double a, double b)
 
     while (cur < pos2) { fputc('.', stdout); cur++; }
     fprintf(stdout, " %s%s%s", color, s1, reset); cur += 1 + (int)strlen(s1);
+
+    while (cur < pos3) { fputc('.', stdout); cur++; }
+    fprintf(stdout, " %s%s%s", color, s2, reset); cur += 1 + (int)strlen(s2);
     fprintf(stdout, "\n");
 }
 
@@ -188,49 +199,57 @@ int main(int argc, char *argv[])
     } else {
         int num_tests = 7;
         char *performance_test_names[num_tests];
-        double performance_test_results[num_tests][2];
+        double performance_test_results[num_tests][3];
         Sudoku s = {0};
 
         sudoku_example_wrong(&s);        
         performance_test_names[0] = "wrong";
         performance_test_results[0][0] = measure_and_assert_solver(sus_count_solutions, s, 0);
-        performance_test_results[0][1] = measure_and_assert_solver(sudoku_get_solutions, s, 0);
+        performance_test_results[0][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, s, 0);
+        performance_test_results[0][2] = measure_and_assert_solver(sudoku_get_solutions, s, 0);
 
         sudoku_example_easy(&s);
         performance_test_names[1] = "easy";
         performance_test_results[1][0] = measure_and_assert_solver(sus_count_solutions, s, 1);
-        performance_test_results[1][1] = measure_and_assert_solver(sudoku_get_solutions, s, 1);
+        performance_test_results[1][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, s, 1);
+        performance_test_results[1][2] = measure_and_assert_solver(sudoku_get_solutions, s, 1);
 
         sudoku_example_medium(&s);
         performance_test_names[2] = "medium";
         performance_test_results[2][0] = measure_and_assert_solver(sus_count_solutions, s, 1);
-        performance_test_results[2][1] = measure_and_assert_solver(sudoku_get_solutions, s, 1);
+        performance_test_results[2][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, s, 1);
+        performance_test_results[2][2] = measure_and_assert_solver(sudoku_get_solutions, s, 1);
 
         sudoku_example_hard(&s);
         performance_test_names[3] = "hard";
         performance_test_results[3][0] = measure_and_assert_solver(sus_count_solutions, s, 1);
-        performance_test_results[3][1] = measure_and_assert_solver(sudoku_get_solutions, s, 1);
+        performance_test_results[3][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, s, 1);
+        performance_test_results[3][2] = measure_and_assert_solver(sudoku_get_solutions, s, 1);
 
         sudoku_example_very_hard(&s);
         performance_test_names[4] = "very hard";
         performance_test_results[4][0] = measure_and_assert_solver(sus_count_solutions, s, 1);
-        performance_test_results[4][1] = 0;// measure_and_assert_solver(sudoku_get_solutions, s, 1);
+        performance_test_results[4][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, s, 1);
+        performance_test_results[4][2] = 0;// measure_and_assert_solver(sudoku_get_solutions, s, 1);
 
         sudoku_example_multiple_solutions(&s);
-        performance_test_names[5] = "multiple solutions";
+        performance_test_names[5] = "multiple solutions (2761)";
         performance_test_results[5][0] = measure_and_assert_solver(sus_count_solutions, s, 2761);
-        performance_test_results[5][1] = 0; // measure_and_assert_solver(sudoku_get_solutions, s, 2761);
+        performance_test_results[5][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, s, 2761);
+        performance_test_results[5][2] = 0; // measure_and_assert_solver(sudoku_get_solutions, s, 2761);
 
         sudoku_example_even_more_solutions(&s);
-        performance_test_names[6] = "even more solutions";
+        performance_test_names[6] = "even more solutions (>100.000)";
         performance_test_results[6][0] = measure_and_assert_solver(sus_count_solutions, s, -1);
-        performance_test_results[6][1] = 0; // measure_and_assert_solver(sudoku_get_solutions, s, 2761);
+        performance_test_results[6][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, s, -1);
+        performance_test_results[6][2] = 0; // measure_and_assert_solver(sudoku_get_solutions, s, 2761);
 
-        fprintf(stdout, "\nTest name                           SUS                  Brute Force\n");
+        fprintf(stdout, "\nTest name                           SUS                  SUS (no DP)        Brute Force\n");
         for (int i = 0; i < num_tests; i++) {
             print_performance_row(performance_test_names[i],
                 performance_test_results[i][0],
-                performance_test_results[i][1]);
+                performance_test_results[i][1],
+                performance_test_results[i][2]);
         }
         fprintf(stdout, "\n\n");
     }

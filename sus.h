@@ -15,9 +15,11 @@
 
 #ifndef size_t
 typedef __SIZE_TYPE__ size_t;
-typedef unsigned char uint8_t;
-typedef unsigned long int ulong;
 #endif // size_t
+
+#ifndef uint8_t
+typedef unsigned char uint8_t;
+#endif // uint8_t
 
 // Link these with some implementation
 void *malloc(size_t size);
@@ -33,7 +35,7 @@ int sus_solve_sudoku(Sudoku *s);
  Returns 1 in case of a solvable and 0 in case of an 
  unsolvable sudoku field. 
 */
-ulong sus_count_solutions(Sudoku s);
+unsigned long sus_count_solutions(Sudoku s);
 
 /*
  Generates a sudoku field with according size and block_size 
@@ -145,7 +147,7 @@ int sus_solve_sudoku(Sudoku *s)
     return 1;
 }
 
-ulong sus_count_solutions_until(Sudoku s, int max_solutions)
+unsigned long sus_count_solutions_until(Sudoku s, int max_solutions, int dynamic_programming)
 {
     if (!sudoku_is_valid(s)) return 0;
 
@@ -167,12 +169,13 @@ ulong sus_count_solutions_until(Sudoku s, int max_solutions)
     exact_create_setcover_hashtable(s.size * s.size);
     
     SetCover cover = {0};
-    return exact_solve(root, &cover, 0, max_solutions);
+    if (dynamic_programming) return exact_solve(root, &cover, 0, max_solutions);
+    else                     return exact_solve_without_dp(root, &cover, 0, max_solutions);
 }
 
-ulong sus_count_solutions(Sudoku s)
+unsigned long sus_count_solutions(Sudoku s)
 {
-    return sus_count_solutions_until(s, 100000);
+    return sus_count_solutions_until(s, 10000, 1);
 }
 
 uint8_t pseudo_rand(int max) {
@@ -195,7 +198,7 @@ Sudoku sus_generate_sudoku(int size, int block_size, int hints)
         if (s.field[x][y] == 0) {
             s.field[x][y] = val;
 
-            solutions = sus_count_solutions_until(s, 3);
+            solutions = sus_count_solutions_until(s, 3, 1);
             if (solutions == 0) {
                 s.field[x][y] = 0;
                 equal_iterations++;

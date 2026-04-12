@@ -10,9 +10,11 @@
 
 #ifndef size_t
 typedef __SIZE_TYPE__ size_t;
-typedef unsigned char uint8_t;
-typedef unsigned long int ulong;
 #endif // size_t
+
+#ifndef uint8_t
+typedef unsigned char uint8_t;
+#endif // uint8_t
 
 typedef struct {
     int *items;
@@ -43,22 +45,30 @@ typedef struct DLXColumn {
 } DLXColumn;
 
 typedef struct SetCoverHashEntry SetCoverHashEntry;
-
 struct SetCoverHashEntry {
-    long hash;
-    ulong solutions;
+    unsigned long hash;
+    unsigned long solutions;
+    int *key_items;
+    size_t key_count;
     SetCoverHashEntry* next;
 };
+
+#define HASH_CONST 0x9e3779b9
+#define HASHENTRY_NOT_FOUND ((unsigned long)(-1L))
 
 typedef struct {
     SetCoverHashEntry* items;
     size_t capacity;
     size_t count;
+    
+    unsigned long lookup_count;
+    unsigned long hit_count;
 } SetCoverHashTable;
 
+
 /* TODO: comment */
-ulong exact_solve_constriants(uint8_t **constraints, int num_rows, int num_cols, SetCover *cover, int find_first_solution_only, int max_solutions);
-ulong exact_solve(DLXColumn *root, SetCover *cover, int find_first_solution_only, int max_solutions);
+unsigned long exact_solve_constriants(uint8_t **constraints, int num_rows, int num_cols, SetCover *cover, int find_first_solution_only, int max_solutions);
+unsigned long exact_solve(DLXColumn *root, SetCover *cover, int find_first_solution_only, int max_solutions);
 
 #endif // EXACT_COVER_H
 
@@ -67,20 +77,17 @@ ulong exact_solve(DLXColumn *root, SetCover *cover, int find_first_solution_only
 #ifndef EXACT_COVER_IMPLEMENTED
 #define EXACT_COVER_IMPLEMENTED
 
+#ifdef EXACT_COVER_DEBUG
+#include <stdio.h>
+#endif // EXACT_COVER_DEBUG
+
 #ifndef NULL
 #define NULL ((void*)0)
 #endif // NULL
 
-#ifndef size_t
-typedef __SIZE_TYPE__ size_t;
-typedef unsigned char uint8_t;
-typedef unsigned long int ulong;
-#endif // size_t
-
 // Link these with some implementation
 void *malloc(size_t size);
 void free(void *p);
-
 
 // -- DA Macros from www.github.com/tsoding/nob.h --
 
@@ -89,7 +96,7 @@ void free(void *p);
     {                                                                                  \
         if ((expected_capacity) > (da)->capacity) {                                    \
             if ((da)->capacity == 0) {                                                 \
-                (da)->capacity = 256;                                                  \
+                (da)->capacity = (expected_capacity);                                                  \
             }                                                                          \
             while ((expected_capacity) > (da)->capacity) {                             \
                 (da)->capacity *= 2;                                                   \
@@ -144,12 +151,6 @@ void free(void *p);
             (da)->items[jjj] = (da)->items[jjj+1];    \
         }                                             \
     } while (0)
-
-
-// Global variables for dynamic programming table and flag to enable/disable it
-// TODO: rework, cause it slows down than speeds up
-SetCoverHashTable table;
-int ff_dynamic_programming = 1;
 
 DLXColumn* exact_constraints_to_dlx(uint8_t **constraints, int num_rows, int num_cols)
 {
@@ -342,78 +343,133 @@ void exact_delete_possibility(DLXColumn *root, int set_id)
     }
 }
 
-long exact_hash_setcover(SetCover setcover)
+unsigned long exact_hash_key_items(const int *items, size_t count)
 {
-    long hash = 1;
-    for (int i=0; i<setcover.count; i++) {
-        hash ^= setcover.items[i] * 4242829781;//0x9e3779b1;
+    unsigned long hash = 1;
+    for (size_t i = 0; i < count; i++) {
+        hash ^= items[i] * HASH_CONST;
     }
     return hash;
 }
 
-int exact_lookup_setcover_solutions(SetCover setcover)
+int* exact_get_setcover_key(SetCover setcover) 
 {
-    long hash = exact_hash_setcover(setcover);
-    size_t index = hash % table.capacity;
+    if (setcover.count == 0) return NULL;
 
-    SetCoverHashEntry entry = table.items[index];
-    if (entry.solutions != -1) {
-        if (entry.hash == hash) {
-            return (int) entry.solutions;
-        } else {
-            SetCoverHashEntry* e = entry.next;
-            while (e != NULL) {
-                if (e->hash == hash) 
-                    return e->solutions;
-                e = e->next;
-            }
-        }
+    int* key_items = malloc(setcover.count * sizeof(int));
+    for (size_t i = 0; i < setcover.count; i++) {
+        key_items[i] = setcover.items[i];
     }
-    return -1;
+
+    // Keep key canonical so different traversal orders can hit the same cache entry.
+    for (size_t i = 1; i < setcover.count; i++) {
+        int x = key_items[i];
+        size_t j = i;
+        while (j > 0 && key_items[j - 1] > x) {
+            key_items[j] = key_items[j - 1];
+            j--;
+        }
+        key_items[j] = x;
+    }
+
+    return key_items;
 }
 
-void exact_store_setcover_solutions(SetCover setcover, ulong solutions)
+int exact_hashtable_entry_matches(SetCoverHashEntry entry, const int *key_items, size_t key_count, unsigned long hash)
 {
-    long hash = exact_hash_setcover(setcover);
-    size_t index = hash % table.capacity;
+    if (entry.hash != hash) return 0;
+    if (entry.key_count != key_count) return 0;
+    for (size_t i = 0; i < key_count; i++) {
+        if (entry.key_items[i] != key_items[i]) return 0;
+    }
+    return 1;
+}
 
-    if (table.items[index].solutions == -1) {
-        table.items[index] = (SetCoverHashEntry) {
-            .hash = hash,
-            .solutions = solutions,
-        };
+unsigned long exact_lookup_setcover_solutions(SetCoverHashTable *hashtable, SetCover setcover)
+{
+    if (hashtable->capacity == 0) return HASHENTRY_NOT_FOUND;
+
+    hashtable->lookup_count++;
+    int *key_items = exact_get_setcover_key(setcover);
+    unsigned long hash = exact_hash_key_items(key_items, setcover.count);
+    size_t index = hash % hashtable->capacity;
+
+    SetCoverHashEntry entry = hashtable->items[index];
+    if (entry.solutions != HASHENTRY_NOT_FOUND) {
+        if (exact_hashtable_entry_matches(entry, key_items, setcover.count, hash)) {
+            hashtable->hit_count++;
+            free(key_items);
+            return entry.solutions;
+        }
+
+        SetCoverHashEntry* e = entry.next;
+        while (e != NULL) {
+            if (exact_hashtable_entry_matches(*e, key_items, setcover.count, hash)) {
+                hashtable->hit_count++;
+                free(key_items);
+                return e->solutions;
+            }
+            e = e->next;
+        }
+    }
+
+    free(key_items);
+    return HASHENTRY_NOT_FOUND;
+}
+
+void exact_store_setcover_solutions(SetCoverHashTable *hashtable, SetCover setcover, unsigned long solutions)
+{
+    if (hashtable->capacity == 0) return;
+    
+    int *key_items = exact_get_setcover_key(setcover);
+    unsigned long hash = exact_hash_key_items(key_items, setcover.count);
+    size_t index = hash % hashtable->capacity;
+    if (hashtable->items[index].solutions == HASHENTRY_NOT_FOUND) {
+        hashtable->items[index].hash = hash;
+        hashtable->items[index].solutions = solutions;
+        hashtable->items[index].key_count = setcover.count;
+        hashtable->items[index].key_items = key_items;
     } else {
-        SetCoverHashEntry* e = &table.items[index];
+        SetCoverHashEntry* e = &hashtable->items[index];
+        int list_size = 0;
         while (e->next != NULL) {
             e = e->next;
+            list_size++;
+            if (list_size > hashtable->capacity) return;
         }
         e->next = (SetCoverHashEntry*) malloc(sizeof(SetCoverHashEntry));
         e->next->hash = hash;
         e->next->solutions = solutions;
         e->next->next = NULL;
+        e->next->key_count = setcover.count;
+        e->next->key_items = key_items;
     }
 }
 
-void exact_create_setcover_hashtable(int size) {
-    table = (SetCoverHashTable) {0};
-    da_reserve(&table, size);
-    table.count = table.capacity;
+SetCoverHashTable exact_create_setcover_hashtable(int size) {
+    SetCoverHashTable hashtable = (SetCoverHashTable) {0};
+    da_reserve(&hashtable, size);
+    hashtable.count = hashtable.capacity;
 
-    for (int i=0; i<table.count; i++) {
+    for (int i=0; i<hashtable.count; i++) {
         // NULL-element
-        table.items[i] = (SetCoverHashEntry) {
-            .hash = -1,
-            .solutions = -1,
-            .next = NULL,
+        hashtable.items[i] = (SetCoverHashEntry) {
+            .hash      = 1,
+            .solutions = HASHENTRY_NOT_FOUND,
+            .next      = NULL,
+            .key_items = NULL,
+            .key_count = 0,
         };
     }
+
+    return hashtable;
 }
 
-ulong exact_solve(DLXColumn *root, SetCover *cover, int find_first_solution_only, int max_solutions)
+unsigned long exact_solve_with_lookup(DLXColumn *root, SetCover *cover, SetCoverHashTable *hashtable, int find_first_solution_only, int max_solutions)
 {
     if (root->next == root) return 1;
 
-    ulong solutions = 0;
+    unsigned long solutions = 0;
 
     // choose column with least elements
     DLXColumn *start_column = exact_get_shortest_column(root);
@@ -423,9 +479,14 @@ ulong exact_solve(DLXColumn *root, SetCover *cover, int find_first_solution_only
     do {
         da_append(cover, n->set_id);
 
-        if (ff_dynamic_programming && exact_lookup_setcover_solutions(*cover) != -1) {
-            da_remove(cover, cover->count-1);   
+        unsigned long cached_solutions = exact_lookup_setcover_solutions(hashtable, *cover);
+        if (cached_solutions != HASHENTRY_NOT_FOUND) {
+            solutions += cached_solutions;
+            da_remove(cover, cover->count-1);
             n = n->down;
+
+            if (cached_solutions > 0 && find_first_solution_only)
+                return 1;
             continue;
         }
 
@@ -437,7 +498,7 @@ ulong exact_solve(DLXColumn *root, SetCover *cover, int find_first_solution_only
         } while (neighbor != n);
 
         // test solution
-        ulong sub_solutions = exact_solve(root, cover, find_first_solution_only, max_solutions);
+        unsigned long sub_solutions = exact_solve_with_lookup(root, cover, hashtable, find_first_solution_only, max_solutions);
         solutions += sub_solutions;
         if (sub_solutions > 0 && find_first_solution_only)
             return 1;
@@ -445,9 +506,7 @@ ulong exact_solve(DLXColumn *root, SetCover *cover, int find_first_solution_only
         if (max_solutions != -1 && solutions > max_solutions)
             return solutions;
 
-        if (ff_dynamic_programming) {
-            exact_store_setcover_solutions(*cover, sub_solutions);
-        }
+        exact_store_setcover_solutions(hashtable, *cover, sub_solutions);
         
         // uncover row
         da_remove(cover, cover->count-1);
@@ -461,6 +520,29 @@ ulong exact_solve(DLXColumn *root, SetCover *cover, int find_first_solution_only
     } while (n != start_column->head);
     
     return solutions > 0 && find_first_solution_only ? 1 : solutions;
+}
+
+unsigned long exact_solve(DLXColumn *root, SetCover *cover, int find_first_solution_only, int max_solutions)
+{
+    SetCoverHashTable hashtable = exact_create_setcover_hashtable(9*9*9);
+    
+    unsigned long solutions = exact_solve_with_lookup(root, cover, &hashtable, find_first_solution_only, max_solutions);
+
+    #ifdef EXACT_COVER_DEBUG
+    fprintf(stdout, "==Hashtable Stats==\n");
+    fprintf(stdout, "capacity %zu\n", hashtable.capacity);
+    fprintf(stdout, "lookups   %zu\n", hashtable.lookup_count);
+    fprintf(stdout, "hits      %zu\n", hashtable.hit_count);
+    fprintf(stdout, "hit-rate  %.4f\n", (double)(hashtable.hit_count) / (hashtable.lookup_count == 0 ? 1 : hashtable.lookup_count));
+    #endif // EXACT_COVER_DEBUG
+
+    return solutions;
+}
+
+unsigned long exact_solve_without_dp(DLXColumn *root, SetCover *cover, int find_first_solution_only, int max_solutions)
+{
+    SetCoverHashTable hashtable = { .capacity = 0 };
+    return exact_solve_with_lookup(root, cover, &hashtable, find_first_solution_only, max_solutions);
 }
 
 #endif // EXACT_COVER_IMPLEMENTED

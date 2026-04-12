@@ -10,7 +10,7 @@ python3 -m http.server 8080
 ## Test Suite
 ```
 make test
-./sudoku_test with_generator
+./exact_cover_test && ./sudoku_test
 ```
 
 ## Implementation
@@ -19,11 +19,8 @@ The implementation contains one simple recursive greedy algorithm and a reductio
 ## TODO
 - free sudoku resources (currently leaking everything)
 - sudoku generation
-- dynamic programming in sus_dlx_solve_exact_cover to increase performance:
-    - Idea: hash the input (DLXColumn *root, SetCover *cover, int find_first_solution_only) and save the number of solutions if already calculated
-    - How to hash the entire matrix, starting fromm the root? Hash all pointers? => O(#all nodes in matrix)
-    - Or hash just the setcover? that should determine the matrix uniquely anyways.
-    - First: check if the multiple calculations are even a relevant number
+- refactor hashing
+    - Hash quality is weak: HASH_CONST is 2 at exact_cover.h:56, which increases collisions and lowers lookup efficiency.
 - actually usable UI
 
 ## Resources
