@@ -99,7 +99,7 @@ async function init() {
   })
   wasmInstance = wasmModule.instance
 
-  game.board = sudokuPtrToBoard(wasmInstance.exports.export_sudoku_example_easy(0));
+  game.board = wasmInstance.exports.export_generate_sudoku(4, 2, 2 * 2 + 4);
   
   document.getElementById("solve-button").addEventListener("click", (e) => {
     let result = wasmInstance.exports.export_solve_sudoku(game.board.ptr)
@@ -112,15 +112,6 @@ async function init() {
     let size = game.board.n;
     let blockSize = game.board.b;
     let newBoardPtr = wasmInstance.exports.export_generate_sudoku(size, blockSize, blockSize * blockSize + size);
-
-    // switch (type) {
-    //   case "easy":               newBoardPtr = wasmInstance.exports.export_sudoku_example_easy(0); break;
-    //   case "medium":             newBoardPtr = wasmInstance.exports.export_sudoku_example_medium(0); break;
-    //   case "hard":               newBoardPtr = wasmInstance.exports.export_sudoku_example_hard(0); break;
-    //   case "very-hard":          newBoardPtr = wasmInstance.exports.export_sudoku_example_very_hard(0); break;
-    //   case "multiple-solutions": newBoardPtr = wasmInstance.exports.export_sudoku_example_multiple_solutions(0); break;
-    //   default: console.log("Invalid type selected"); break;
-    // }
 
     game.board = sudokuPtrToBoard(newBoardPtr);
     updateSudokuHtml(game.board);

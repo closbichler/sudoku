@@ -1,8 +1,7 @@
-sudoku
-exact_cover
-dlx
+./sudoku
 .vscode/
 sudoku_test
+exact_cover_test
 *.wasm
 *.o
 *.su

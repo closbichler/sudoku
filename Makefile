@@ -1,10 +1,10 @@
 all: test web
 
-test: sudoku.h sudoku_test.c sus.h examples.h exact_cover.h
+test: sudoku.h sudoku_test.c sus.h exact_cover.h
 	gcc -o sudoku_test sudoku_test.c -Wall
 	gcc -o exact_cover_test exact_cover_test.c -Wall
 
-web: sudoku.h sus.h examples.h
+web: sudoku.h sus.h sus_glue.c extern/walloc.c
 	clang --target=wasm32 -nostdlib -c -o walloc.o extern/walloc.c
 	clang --target=wasm32 -nostdlib -c -o sus_glue.o sus_glue.c
 	wasm-ld --no-entry -o ./public/sudoku.wasm sus_glue.o walloc.o

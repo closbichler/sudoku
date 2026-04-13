@@ -4,9 +4,45 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
+#include <errno.h>
+#include <limits.h>
 
 #define EXACT_COVER_IMPLEMENTATION
 #include "exact_cover.h"
+
+// -- Print functions --
+
+void print_performance_row(const char *name, double a, double b, double c)
+{
+    const char *color = "\x1b[36m"; // cyan
+    const char *reset = "\x1b[0m";
+    char s0[64], s1[64];
+    char s2[64];
+
+    if (a == 0) snprintf(s0, sizeof s0, "N/A");
+    else        snprintf(s0, sizeof s0, "%.4fs", a);
+    if (b == 0) snprintf(s1, sizeof s1, "N/A");
+    else        snprintf(s1, sizeof s1, "%.4fs", b);
+    if (c == 0) snprintf(s2, sizeof s2, "N/A");
+    else        snprintf(s2, sizeof s2, "%.4fs", c);
+
+    int pos1 = 35, pos2 = 56, pos3 = 79;
+    int cur = 0;
+
+    fprintf(stdout, "%s ", name);
+    cur = (int)strlen(name) + 1;
+
+    while (cur < pos1) { fputc('.', stdout); cur++; }
+    fprintf(stdout, " %s%s%s", color, s0, reset); cur += 1 + (int)strlen(s0);
+
+    while (cur < pos2) { fputc('.', stdout); cur++; }
+    fprintf(stdout, " %s%s%s", color, s1, reset); cur += 1 + (int)strlen(s1);
+
+    while (cur < pos3) { fputc('.', stdout); cur++; }
+    fprintf(stdout, " %s%s%s", color, s2, reset); cur += 1 + (int)strlen(s2);
+    fprintf(stdout, "\n");
+}
 
 // -- Helper functions --
 
@@ -37,34 +73,76 @@ bool set_covers_equal(SetCover expected_cover, SetCover actual_cover)
     return true;
 }
 
-void exact_print_column(DLXNode *head) 
+bool parse_constraints(FILE *file, uint8_t ***constraints, long *num_rows, long *num_cols)
 {
-    DLXNode *n = head;
-    int current_set = 0;
-    do {
-        for (int i=0; i<n->set_id - current_set; i++) printf("  ");
-        current_set = n->set_id + 1;
-        
-        printf("%d ", n->val);
-        n = n->down;
-    } while (n != head);
-    printf("\n");
+    char line[4096];
+    fgets(line, sizeof(line), file);
+
+    if (strncmp(line, "exact_cover ", 12) != 0) {
+        fprintf(stderr, "\x1b[31m Invalid file format: expected line starting with 'exact_cover '.\x1b[0m\n");
+        return false;
+    }
+
+    char *endptr;
+    *num_rows = strtol(line + 12, &endptr, 10);
+    if (*num_rows < 0 || endptr == line || errno != 0 || *num_rows == LONG_MIN || *num_rows == LONG_MAX) {
+        fprintf(stderr, "\x1b[31m Invalid number of rows: %ld.\x1b[0m\n", *num_rows);
+        return false;
+    }
+    *num_cols = strtol(endptr + 1, &endptr, 10);
+    if (*num_cols < 0 || endptr == line || errno != 0 || *num_cols == LONG_MIN || *num_cols == LONG_MAX) {
+        fprintf(stderr, "\x1b[31m Invalid number of columns: %ld.\x1b[0m\n", *num_cols);
+        return false;
+    }
+
+    *constraints = create_empty_constraint_sets(*num_rows, *num_cols);
+    for (int i = 0; i < *num_rows; i++) {
+        fgets(line, sizeof(line), file);
+        char *p = line;
+        for (int j = 0; j < *num_cols; j++) {
+            int val = (int)strtol(p, &p, 10);
+            (*constraints)[i][j] = (uint8_t)val;
+        }
+    }
+    
+    return true;
 }
 
-void exact_print_columns(DLXColumn *root)
+double measure_and_assert_solve_constraints(const char *filename, unsigned long max_solutions, unsigned long num_solutions, bool without_dp) 
 {
-    DLXColumn *c = root->next;
-    printf("Col (len): \n");
-    do {
-        printf("%03d (%02d): ", c->id, c->len);
-        if (c->head == NULL) {
-            c = c->next;
-            printf("\n");
-            continue;
-        }
-        exact_print_column(c->head);
-        c = c->next;
-    } while (c != root);
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) {
+        fprintf(stderr, "\x1b[31m Failed to open file %s.\x1b[0m\n", filename);
+        return 0;
+    }
+
+    uint8_t **constraints;
+    long rows, cols;
+    if (!parse_constraints(file, &constraints, &rows, &cols)) {
+        fprintf(stderr, "\x1b[31m Failed to parse constraints from file %s.\x1b[0m\n", filename);
+        fclose(file);
+        return 0;
+    }
+    fclose(file);
+
+    clock_t start, end;
+    double cpu_time_used;
+    SetCover cover = {0};
+    unsigned long solutions;
+
+    start = clock();
+    if (without_dp) {
+        solutions = exact_solve_constraints_without_dp(constraints, rows, cols, &cover, 0, max_solutions);
+    } else {
+        solutions = exact_solve_constraints(constraints, rows, cols, &cover, 0, max_solutions);
+    }
+    end = clock();
+    
+    if (num_solutions != -1 && solutions != num_solutions) {
+        fprintf(stderr, "\x1b[31m Expected %ld solutions but got %ld.\x1b[0m\n", num_solutions, solutions);
+    }
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    return cpu_time_used;
 }
 
 // -- Unit tests --
@@ -242,7 +320,7 @@ bool test_solve_exact_cover_2(SetCover expected_cover)
     constraint_sets[3] = (uint8_t[]) { 0,0,1,0,1,1,0 };
     constraint_sets[4] = (uint8_t[]) { 0,1,1,0,0,1,1 };
     constraint_sets[5] = (uint8_t[]) { 0,1,0,0,0,0,1 };
-        DLXColumn *root = exact_constraints_to_dlx(constraint_sets, 6, 7);
+    DLXColumn *root = exact_constraints_to_dlx(constraint_sets, 6, 7);
     SetCover cover = {0};
 
     exact_create_setcover_hashtable(16);
@@ -292,6 +370,7 @@ bool test_solve_exact_cover_incomplete(SetCover expected_cover)
 int main() 
 {
     bool test_unit = true;
+    bool test_performance = true;
 
     fprintf(stdout, "\n\x1b[36m\x1b[1m========================================\n");
     fprintf(stdout, "  \x1b[33mExact Cover — Unit Tests\x1b[36m\n");
@@ -344,6 +423,44 @@ int main()
             fprintf(stdout, "%s ", test_names[i]);
             for (int d = 0; d < dots; d++) fputc('.', stdout);
             fprintf(stdout, " %s%s%s\n", color, result, reset);
+        }
+        fprintf(stdout, "\n\n");
+    }
+
+fprintf(stdout, "Performance test summary: \n");
+    if (!test_performance) {
+        fprintf(stdout, "skipped.\n\n");
+    } else {
+        int num_tests = 5;
+        char *performance_test_names[num_tests];
+        double performance_test_results[num_tests][2];
+
+        performance_test_names [0] = "tiny 2 solutions (4-2.txt)";
+        performance_test_results[0][0] = measure_and_assert_solve_constraints("examples/exact_cover/4-2.txt", 1000, 2, false);
+        performance_test_results[0][1] = measure_and_assert_solve_constraints("examples/exact_cover/4-2.txt", 1000, 2, true);
+        
+        performance_test_names[1] = "easy 118 solutions (30-10.txt)";
+        performance_test_results[1][0] = measure_and_assert_solve_constraints("examples/exact_cover/30-10.txt", 1000, 118, false);
+        performance_test_results[1][1] = measure_and_assert_solve_constraints("examples/exact_cover/30-10.txt", 1000, 118, true);
+
+        performance_test_names[2] = "easy 0 solutions (300-100.txt)";
+        performance_test_results[2][0] = measure_and_assert_solve_constraints("examples/exact_cover/300-100.txt", 1000, 0, false);
+        performance_test_results[2][1] = measure_and_assert_solve_constraints("examples/exact_cover/300-100.txt", 1000, 0, true);
+        
+        performance_test_names[3] = "easy 0 solutions (300-100.txt)";
+        performance_test_results[3][0] = measure_and_assert_solve_constraints("examples/exact_cover/300-100.txt", 1000, 0, false);
+        performance_test_results[3][1] = measure_and_assert_solve_constraints("examples/exact_cover/300-100.txt", 1000, 0, true);
+       
+        performance_test_names[4] = "easy 0 solutions (3000-1000.txt)";
+        performance_test_results[4][0] = measure_and_assert_solve_constraints("examples/exact_cover/3000-1000.txt", 1000, 1, false);
+        performance_test_results[4][1] = measure_and_assert_solve_constraints("examples/exact_cover/3000-1000.txt", 1000, 1, true);
+
+        fprintf(stdout, "\nTest name                           with DP              without DP        \n");
+        for (int i = 0; i < num_tests; i++) {
+            print_performance_row(performance_test_names[i],
+                performance_test_results[i][0],
+                performance_test_results[i][1],
+                0);
         }
         fprintf(stdout, "\n\n");
     }

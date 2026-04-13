@@ -4,15 +4,15 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <limits.h>
+#include <errno.h>
 
 #define SUDOKU_IMPLEMENTATION
-#define EXACT_COVER_DEBUG
+// #define EXACT_COVER_DEBUG
 #include "sudoku.h"
 
 #define SUS_IMPLEMENTATION
 #include "sus.h"
-
-#include "examples.h"
 
 // -- Test and debug helper functions -- 
 
@@ -64,8 +64,63 @@ ulong count_solutions_without_dp_wrapper(Sudoku s) {
     return sus_count_solutions_until(s, 10000, 0);
 }
 
-double measure_and_assert_solver(ulong (*F)(Sudoku), Sudoku s, ulong num_solutions) 
+bool parse_sudoku(FILE *file, Sudoku *s) 
 {
+    char line[4096];
+    fgets(line, sizeof(line), file);
+
+    if (strncmp(line, "sudoku ", 6) != 0) {
+        fprintf(stderr, "\x1b[31m Invalid file format: expected line starting with 'sudoku '.\x1b[0m\n");
+        return false;
+    }
+
+    int size, block_size;
+
+    char *endptr;
+    size = strtol(line + 6, &endptr, 10);
+    if (size < 0 || endptr == line || errno != 0 || size == LONG_MIN || size == LONG_MAX) {
+        fprintf(stderr, "\x1b[31m Invalid sudoku size: %d.\x1b[0m\n", size);
+        return false;
+    }
+    block_size = strtol(endptr + 1, &endptr, 10);
+    if (block_size < 0 || endptr == line || errno != 0 || block_size == LONG_MIN || block_size == LONG_MAX) {
+        fprintf(stderr, "\x1b[31m Invalid block size: %d.\x1b[0m\n", block_size);
+        return false;
+    }
+
+    *s = sudoku_create_empty(size, block_size);
+    for (int i = 0; i < size; i++) {
+        fgets(line, sizeof(line), file);
+        char *p = line;
+        for (int j = 0; j < size; j++) {
+            int val = (int)strtol(p, &p, 10);
+            s->field[i][j] = (uint8_t)val;
+        }
+    }
+    
+    return true;
+}
+
+bool read_sudoku_from_file(const char *filename, Sudoku *s) 
+{
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) {
+        fprintf(stderr, "\x1b[31m Failed to open file %s.\x1b[0m\n", filename);
+        return false;
+    }
+    bool result = parse_sudoku(file, s);
+    fclose(file);
+    return result;
+}
+
+double measure_and_assert_solver(ulong (*F)(Sudoku), const char *filename, ulong num_solutions) 
+{
+    Sudoku s = {0};
+    if (!read_sudoku_from_file(filename, &s)) {
+        fprintf(stderr, "\x1b[31m Failed to read sudoku from file %s.\x1b[0m\n", filename);
+        return 0;
+    }
+
     clock_t start, end;
     double cpu_time_used;
     ulong solutions;
@@ -116,7 +171,7 @@ void print_performance_row(const char *name, double a, double b, double c)
 bool test_solve_sudoku_1() 
 {
     Sudoku s = {0};
-    sudoku_example_easy(&s);
+    if (!read_sudoku_from_file("examples/sudoku/9x9-easy.txt", &s)) return false;
     if(!sus_solve_sudoku(&s)) return false;
     if(!sudoku_is_valid(s)) return false;
     return true;
@@ -125,7 +180,7 @@ bool test_solve_sudoku_1()
 bool test_solve_sudoku_2() 
 {
     Sudoku s = {0};
-    sudoku_example_medium(&s);
+    if (!read_sudoku_from_file("examples/sudoku/9x9-medium.txt", &s)) return false;
     if(!sus_solve_sudoku(&s)) return false;
     if(!sudoku_is_valid(s)) return false;
     return true;
@@ -134,16 +189,16 @@ bool test_solve_sudoku_2()
 bool test_count_solutions()
 {
     Sudoku s1 = {0};
-    sudoku_example_easy(&s1);
+    if (!read_sudoku_from_file("examples/sudoku/9x9-easy.txt", &s1)) return false;
     if(sus_count_solutions(s1) != 1) return false;
 
     Sudoku s2 = {0};
-    sudoku_example_multiple_solutions(&s2);
+    if (!read_sudoku_from_file("examples/sudoku/9x9-multiple-solutions.txt", &s2)) return false;
     ulong result = sus_count_solutions(s2);
     if(result != 2761) return false;
     
     Sudoku s3 = {0};
-    sudoku_example_no_solutions(&s3);
+    if (!read_sudoku_from_file("examples/sudoku/9x9-no-solutions.txt", &s3)) return false;
     if(sus_count_solutions(s3) != 0) return false;
     return true;
 }
@@ -152,7 +207,6 @@ int main(int argc, char *argv[])
 {
     bool test_unit        = true;
     bool test_performance = true;
-    bool test_real        = false;
     bool test_generate    = false;
 
     fprintf(stdout, "\n\x1b[36m\x1b[1m========================================\n");
@@ -200,49 +254,41 @@ int main(int argc, char *argv[])
         int num_tests = 7;
         char *performance_test_names[num_tests];
         double performance_test_results[num_tests][3];
-        Sudoku s = {0};
 
-        sudoku_example_wrong(&s);        
         performance_test_names[0] = "wrong";
-        performance_test_results[0][0] = measure_and_assert_solver(sus_count_solutions, s, 0);
-        performance_test_results[0][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, s, 0);
-        performance_test_results[0][2] = measure_and_assert_solver(sudoku_get_solutions, s, 0);
+        performance_test_results[0][0] = measure_and_assert_solver(sus_count_solutions, "examples/sudoku/9x9-wrong.txt", 0);
+        performance_test_results[0][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, "examples/sudoku/9x9-wrong.txt", 0);
+        performance_test_results[0][2] = measure_and_assert_solver(sudoku_get_solutions, "examples/sudoku/9x9-wrong.txt", 0);
 
-        sudoku_example_easy(&s);
         performance_test_names[1] = "easy";
-        performance_test_results[1][0] = measure_and_assert_solver(sus_count_solutions, s, 1);
-        performance_test_results[1][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, s, 1);
-        performance_test_results[1][2] = measure_and_assert_solver(sudoku_get_solutions, s, 1);
+        performance_test_results[1][0] = measure_and_assert_solver(sus_count_solutions, "examples/sudoku/9x9-easy.txt", 1);
+        performance_test_results[1][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, "examples/sudoku/9x9-easy.txt", 1);
+        performance_test_results[1][2] = measure_and_assert_solver(sudoku_get_solutions, "examples/sudoku/9x9-easy.txt", 1);
 
-        sudoku_example_medium(&s);
         performance_test_names[2] = "medium";
-        performance_test_results[2][0] = measure_and_assert_solver(sus_count_solutions, s, 1);
-        performance_test_results[2][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, s, 1);
-        performance_test_results[2][2] = measure_and_assert_solver(sudoku_get_solutions, s, 1);
+        performance_test_results[2][0] = measure_and_assert_solver(sus_count_solutions, "examples/sudoku/9x9-medium.txt", 1);
+        performance_test_results[2][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, "examples/sudoku/9x9-medium.txt", 1);
+        performance_test_results[2][2] = measure_and_assert_solver(sudoku_get_solutions, "examples/sudoku/9x9-medium.txt", 1);
 
-        sudoku_example_hard(&s);
         performance_test_names[3] = "hard";
-        performance_test_results[3][0] = measure_and_assert_solver(sus_count_solutions, s, 1);
-        performance_test_results[3][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, s, 1);
-        performance_test_results[3][2] = measure_and_assert_solver(sudoku_get_solutions, s, 1);
+        performance_test_results[3][0] = measure_and_assert_solver(sus_count_solutions, "examples/sudoku/9x9-hard.txt", 1);
+        performance_test_results[3][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, "examples/sudoku/9x9-hard.txt", 1);
+        performance_test_results[3][2] = measure_and_assert_solver(sudoku_get_solutions, "examples/sudoku/9x9-hard.txt", 1);
 
-        sudoku_example_very_hard(&s);
         performance_test_names[4] = "very hard";
-        performance_test_results[4][0] = measure_and_assert_solver(sus_count_solutions, s, 1);
-        performance_test_results[4][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, s, 1);
-        performance_test_results[4][2] = 0;// measure_and_assert_solver(sudoku_get_solutions, s, 1);
+        performance_test_results[4][0] = measure_and_assert_solver(sus_count_solutions, "examples/sudoku/9x9-very-hard.txt", 1);
+        performance_test_results[4][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, "examples/sudoku/9x9-very-hard.txt", 1);
+        performance_test_results[4][2] = 0;// measure_and_assert_solver(sudoku_get_solutions, "examples/sudoku/9x9-very-hard.txt", 1);
 
-        sudoku_example_multiple_solutions(&s);
         performance_test_names[5] = "multiple solutions (2761)";
-        performance_test_results[5][0] = measure_and_assert_solver(sus_count_solutions, s, 2761);
-        performance_test_results[5][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, s, 2761);
-        performance_test_results[5][2] = 0; // measure_and_assert_solver(sudoku_get_solutions, s, 2761);
+        performance_test_results[5][0] = measure_and_assert_solver(sus_count_solutions, "examples/sudoku/9x9-multiple-solutions.txt", 2761);
+        performance_test_results[5][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, "examples/sudoku/9x9-multiple-solutions.txt", 2761);
+        performance_test_results[5][2] = 0; // measure_and_assert_solver(sudoku_get_solutions, "examples/sudoku/9x9-multiple-solutions.txt", 2761);
 
-        sudoku_example_even_more_solutions(&s);
         performance_test_names[6] = "even more solutions (>100.000)";
-        performance_test_results[6][0] = measure_and_assert_solver(sus_count_solutions, s, -1);
-        performance_test_results[6][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, s, -1);
-        performance_test_results[6][2] = 0; // measure_and_assert_solver(sudoku_get_solutions, s, 2761);
+        performance_test_results[6][0] = measure_and_assert_solver(sus_count_solutions, "examples/sudoku/9x9-a-lot-solutions.txt", -1);
+        performance_test_results[6][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, "examples/sudoku/9x9-a-lot-solutions.txt", -1);
+        performance_test_results[6][2] = 0; // measure_and_assert_solver(sudoku_get_solutions, "examples/sudoku/9x9-a-lot-solutions.txt", 2761);
 
         fprintf(stdout, "\nTest name                           SUS                  SUS (no DP)        Brute Force\n");
         for (int i = 0; i < num_tests; i++) {
@@ -254,26 +300,6 @@ int main(int argc, char *argv[])
         fprintf(stdout, "\n\n");
     }
   
-    fprintf(stdout, "Real sudoku tests: \n");
-    if (!test_real) {
-        fprintf(stdout, "skipped.\n\n");
-    } else {
-        fprintf(stdout, "\n");
-
-        Sudoku s = {0};
-
-        sudoku_example_hard(&s);
-        solve_and_print_sudoku(s);
-        
-        sudoku_example_4x4(&s);
-        solve_and_print_sudoku(s);
-
-        sudoku_example_16x16(&s);
-        solve_and_print_sudoku(s);
-        
-        fprintf(stdout, "\n\n");
-    }
-
     fprintf(stdout, "Generate sudokus: \n");
     if (!test_generate) {
         fprintf(stdout, "skipped.\n\n");

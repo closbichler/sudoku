@@ -67,8 +67,8 @@ typedef struct {
 
 
 /* TODO: comment */
-unsigned long exact_solve_constriants(uint8_t **constraints, int num_rows, int num_cols, SetCover *cover, int find_first_solution_only, int max_solutions);
-unsigned long exact_solve(DLXColumn *root, SetCover *cover, int find_first_solution_only, int max_solutions);
+unsigned long exact_solve_constriants(uint8_t **constraints, int num_rows, int num_cols, SetCover *cover, int find_first_solution_only, unsigned long max_solutions);
+unsigned long exact_solve(DLXColumn *root, SetCover *cover, int find_first_solution_only, unsigned long max_solutions);
 
 #endif // EXACT_COVER_H
 
@@ -465,7 +465,7 @@ SetCoverHashTable exact_create_setcover_hashtable(int size) {
     return hashtable;
 }
 
-unsigned long exact_solve_with_lookup(DLXColumn *root, SetCover *cover, SetCoverHashTable *hashtable, int find_first_solution_only, int max_solutions)
+unsigned long exact_solve_with_lookup(DLXColumn *root, SetCover *cover, SetCoverHashTable *hashtable, int find_first_solution_only, unsigned long max_solutions)
 {
     if (root->next == root) return 1;
 
@@ -522,7 +522,7 @@ unsigned long exact_solve_with_lookup(DLXColumn *root, SetCover *cover, SetCover
     return solutions > 0 && find_first_solution_only ? 1 : solutions;
 }
 
-unsigned long exact_solve(DLXColumn *root, SetCover *cover, int find_first_solution_only, int max_solutions)
+unsigned long exact_solve(DLXColumn *root, SetCover *cover, int find_first_solution_only, unsigned long max_solutions)
 {
     SetCoverHashTable hashtable = exact_create_setcover_hashtable(9*9*9);
     
@@ -539,10 +539,22 @@ unsigned long exact_solve(DLXColumn *root, SetCover *cover, int find_first_solut
     return solutions;
 }
 
-unsigned long exact_solve_without_dp(DLXColumn *root, SetCover *cover, int find_first_solution_only, int max_solutions)
+unsigned long exact_solve_without_dp(DLXColumn *root, SetCover *cover, int find_first_solution_only, unsigned long max_solutions)
 {
     SetCoverHashTable hashtable = { .capacity = 0 };
     return exact_solve_with_lookup(root, cover, &hashtable, find_first_solution_only, max_solutions);
+}
+
+unsigned long exact_solve_constraints(uint8_t **constraints, int num_rows, int num_cols, SetCover *cover, int find_first_solution_only, unsigned long max_solutions)
+{
+    DLXColumn *root = exact_constraints_to_dlx(constraints, num_rows, num_cols);
+    return exact_solve(root, cover, find_first_solution_only, max_solutions);
+}
+
+unsigned long exact_solve_constraints_without_dp(uint8_t **constraints, int num_rows, int num_cols, SetCover *cover, int find_first_solution_only, unsigned long max_solutions)
+{
+    DLXColumn *root = exact_constraints_to_dlx(constraints, num_rows, num_cols);
+    return exact_solve_without_dp(root, cover, find_first_solution_only, max_solutions);
 }
 
 #endif // EXACT_COVER_IMPLEMENTED

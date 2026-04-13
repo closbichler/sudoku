@@ -4,8 +4,6 @@
 #define SUS_IMPLEMENTATION
 #include "sus.h"
 
-#include "examples.h"
-
 #ifndef size_t
 typedef __SIZE_TYPE__ size_t;
 #endif // size_t
@@ -46,12 +44,6 @@ Sudoku* WASM_EXPORT(export_generate_sudoku)(int size, int block_size, int hints)
 int WASM_EXPORT(export_sudoku_is_valid)(Sudoku s)      { return sudoku_is_valid(s); }
 int WASM_EXPORT(export_sudoku_is_solvable)(Sudoku s)   { return sudoku_is_solvable(s); }
 int WASM_EXPORT(export_sudoku_get_solutions)(Sudoku s) { return sudoku_get_solutions(s); }
-
-Sudoku* WASM_EXPORT(export_sudoku_example_easy)()      { Sudoku* s = malloc(sizeof(Sudoku)); sudoku_example_easy(s); return s; }
-Sudoku* WASM_EXPORT(export_sudoku_example_medium)()    { Sudoku* s = malloc(sizeof(Sudoku)); sudoku_example_medium(s); return s; }
-Sudoku* WASM_EXPORT(export_sudoku_example_hard)()      { Sudoku* s = malloc(sizeof(Sudoku)); sudoku_example_hard(s); return s; }
-Sudoku* WASM_EXPORT(export_sudoku_example_very_hard)() { Sudoku* s = malloc(sizeof(Sudoku)); sudoku_example_very_hard(s); return s; }
-Sudoku* WASM_EXPORT(export_sudoku_example_multiple_solutions)() { Sudoku* s = malloc(sizeof(Sudoku)); sudoku_example_multiple_solutions(s); return s; }
 
 int WASM_EXPORT(export_solve_sudoku)(Sudoku* s)        { return sus_solve_sudoku(s); }
 int WASM_EXPORT(export_count_solutions)(Sudoku* s)     { return sus_count_solutions(*s); }
