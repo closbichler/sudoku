@@ -27,7 +27,7 @@ void print_performance_row(const char *name, double a, double b, double c)
     if (c == 0) snprintf(s2, sizeof s2, "N/A");
     else        snprintf(s2, sizeof s2, "%.4fs", c);
 
-    int pos1 = 35, pos2 = 56, pos3 = 79;
+    int pos1 = 35, pos2 = 65, pos3 = 79;
     int cur = 0;
 
     fprintf(stdout, "%s ", name);
@@ -46,23 +46,13 @@ void print_performance_row(const char *name, double a, double b, double c)
 
 // -- Helper functions --
 
-uint8_t** create_empty_constraint_sets(int num_sets, int set_size)
-{
-    uint8_t **constraint_sets = malloc(num_sets * sizeof(uint8_t*));
-    for (int i = 0; i < num_sets; i++) {
-        constraint_sets[i] = malloc(set_size * sizeof(uint8_t));
-        memset(constraint_sets[i], 0, set_size * sizeof(uint8_t));
-    }
-    return constraint_sets;
-}
-
 bool set_covers_equal(SetCover expected_cover, SetCover actual_cover) 
 {
     if (expected_cover.count != actual_cover.count) return false;
 
-    for (int i = 0; i < expected_cover.count; i++) {
+    for (size_t i = 0; i < expected_cover.count; i++) {
         bool found = false;
-        for (int j=0; j<actual_cover.count; j++) {
+        for (size_t j=0; j<actual_cover.count; j++) {
             if (expected_cover.items[i] == actual_cover.items[j]) {
                 found = true;
                 break;
@@ -95,7 +85,7 @@ bool parse_constraints(FILE *file, uint8_t ***constraints, long *num_rows, long 
         return false;
     }
 
-    *constraints = create_empty_constraint_sets(*num_rows, *num_cols);
+    *constraints = exact_create_empty_constraint_sets(*num_rows, *num_cols);
     for (int i = 0; i < *num_rows; i++) {
         fgets(line, sizeof(line), file);
         char *p = line;
@@ -138,7 +128,7 @@ double measure_and_assert_solve_constraints(const char *filename, unsigned long 
     }
     end = clock();
     
-    if (num_solutions != -1 && solutions != num_solutions) {
+    if (num_solutions != -1UL && solutions != num_solutions) {
         fprintf(stderr, "\x1b[31m Expected %ld solutions but got %ld.\x1b[0m\n", num_solutions, solutions);
     }
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
@@ -149,7 +139,7 @@ double measure_and_assert_solve_constraints(const char *filename, unsigned long 
 
 bool test_exact_constraints_to_dlx()
 {
-    uint8_t **constraint_sets = create_empty_constraint_sets(3, 3);
+    uint8_t **constraint_sets = exact_create_empty_constraint_sets(3, 3);
     constraint_sets[0] = (uint8_t[]) { 1,0,2 };
     constraint_sets[1] = (uint8_t[]) { 0,3,0 };
     constraint_sets[2] = (uint8_t[]) { 4,5,0 };
@@ -170,7 +160,7 @@ bool test_exact_constraints_to_dlx()
 
 bool test_remove_node() 
 {
-    uint8_t **constraint_sets = create_empty_constraint_sets(3, 3);
+    uint8_t **constraint_sets = exact_create_empty_constraint_sets(3, 3);
     constraint_sets[0] = (uint8_t[]) { 1,0,2 };
     constraint_sets[1] = (uint8_t[]) { 0,3,0 };
     constraint_sets[2] = (uint8_t[]) { 4,5,0 };
@@ -190,7 +180,7 @@ bool test_remove_node()
 
 bool test_unremove_node()
 {
-    uint8_t **constraint_sets = create_empty_constraint_sets(3, 3);
+    uint8_t **constraint_sets = exact_create_empty_constraint_sets(3, 3);
     constraint_sets[0] = (uint8_t[]) { 1,0,2 };
     constraint_sets[1] = (uint8_t[]) { 0,3,0 };
     constraint_sets[2] = (uint8_t[]) { 4,5,0 };
@@ -208,7 +198,7 @@ bool test_unremove_node()
 
 bool test_cover_column()
 {
-    uint8_t **constraint_sets = create_empty_constraint_sets(3, 3);
+    uint8_t **constraint_sets = exact_create_empty_constraint_sets(3, 3);
     constraint_sets[0] = (uint8_t[]) { 1,0,2 };
     constraint_sets[1] = (uint8_t[]) { 0,3,0 };
     constraint_sets[2] = (uint8_t[]) { 4,5,0 };
@@ -228,7 +218,7 @@ bool test_cover_column()
 
 bool test_uncover_column_1() 
 {
-    uint8_t **constraint_sets = create_empty_constraint_sets(3, 3);
+    uint8_t **constraint_sets = exact_create_empty_constraint_sets(3, 3);
     constraint_sets[0] = (uint8_t[]) { 1,0,2 };
     constraint_sets[1] = (uint8_t[]) { 0,3,0 };
     constraint_sets[2] = (uint8_t[]) { 4,5,0 };
@@ -250,7 +240,7 @@ bool test_uncover_column_1()
 
 bool test_uncover_column_2() 
 {
-    uint8_t **constraint_sets = create_empty_constraint_sets(6, 7);
+    uint8_t **constraint_sets = exact_create_empty_constraint_sets(6, 7);
 
     constraint_sets[0] = (uint8_t[]) { 1,0,0,1,0,0,1 };
     constraint_sets[1] = (uint8_t[]) { 1,0,0,1,0,0,0 };
@@ -271,7 +261,7 @@ bool test_uncover_column_2()
 
 bool test_get_shortest_column()
 {
-    uint8_t **constraint_sets = create_empty_constraint_sets(3, 3);
+    uint8_t **constraint_sets = exact_create_empty_constraint_sets(3, 3);
     constraint_sets[0] = (uint8_t[]) { 1,0,2 };
     constraint_sets[1] = (uint8_t[]) { 0,3,0 };
     constraint_sets[2] = (uint8_t[]) { 4,5,0 };
@@ -280,7 +270,7 @@ bool test_get_shortest_column()
     if (c->id != 2) return false;
     if (c != root->next->next->next) return false;
 
-    constraint_sets = create_empty_constraint_sets(6, 7);
+    constraint_sets = exact_create_empty_constraint_sets(6, 7);
     constraint_sets[0] = (uint8_t[]) { 1,0,0,1,0,0,1 };
     constraint_sets[1] = (uint8_t[]) { 1,0,0,1,0,0,0 };
     constraint_sets[2] = (uint8_t[]) { 0,0,0,1,1,0,1 };
@@ -297,7 +287,7 @@ bool test_get_shortest_column()
 
 bool test_solve_exact_cover_1(SetCover expected_cover)
 {
-    uint8_t **constraint_sets = create_empty_constraint_sets(3, 3);
+    uint8_t **constraint_sets = exact_create_empty_constraint_sets(3, 3);
     constraint_sets[0] = (uint8_t[]) { 1,0,1 };
     constraint_sets[1] = (uint8_t[]) { 1,1,0 };
     constraint_sets[2] = (uint8_t[]) { 0,1,0 };
@@ -313,7 +303,7 @@ bool test_solve_exact_cover_1(SetCover expected_cover)
 
 bool test_solve_exact_cover_2(SetCover expected_cover)
 {
-    uint8_t **constraint_sets = create_empty_constraint_sets(6, 7);
+    uint8_t **constraint_sets = exact_create_empty_constraint_sets(6, 7);
     constraint_sets[0] = (uint8_t[]) { 1,0,0,1,0,0,1 };
     constraint_sets[1] = (uint8_t[]) { 1,0,0,1,0,0,0 };
     constraint_sets[2] = (uint8_t[]) { 0,0,0,1,1,0,1 };
@@ -332,7 +322,7 @@ bool test_solve_exact_cover_2(SetCover expected_cover)
 
 bool test_solve_exact_cover_3(SetCover expected_cover)
 {
-    uint8_t **constraint_sets = create_empty_constraint_sets(6, 7);
+    uint8_t **constraint_sets = exact_create_empty_constraint_sets(6, 7);
     constraint_sets[0] = (uint8_t[]) { 0,1,0,0,1,0,0 };
     constraint_sets[1] = (uint8_t[]) { 0,0,1,0,0,1,0 };
     constraint_sets[2] = (uint8_t[]) { 1,0,0,0,0,0,0 };
@@ -350,7 +340,7 @@ bool test_solve_exact_cover_3(SetCover expected_cover)
 
 bool test_solve_exact_cover_incomplete(SetCover expected_cover)
 {
-    uint8_t **constraint_sets = create_empty_constraint_sets(6, 7);
+    uint8_t **constraint_sets = exact_create_empty_constraint_sets(6, 7);
     constraint_sets[0] = (uint8_t[]) { 0,1,0,0,1,0,0 };
     constraint_sets[1] = (uint8_t[]) { 0,0,1,0,0,1,0 };
     constraint_sets[2] = (uint8_t[]) { 1,0,0,1,0,0,0 };
@@ -373,7 +363,7 @@ int main()
     bool test_performance = true;
 
     fprintf(stdout, "\n\x1b[36m\x1b[1m========================================\n");
-    fprintf(stdout, "  \x1b[33mExact Cover — Unit Tests\x1b[36m\n");
+    fprintf(stdout, "  \x1b[33mExact Cover — Unit and Performance Tests\x1b[36m\n");
     fprintf(stdout, "========================================\x1b[0m\n\n");
 
     fprintf(stdout, "Unit test summary:\n");
@@ -431,29 +421,45 @@ fprintf(stdout, "Performance test summary: \n");
     if (!test_performance) {
         fprintf(stdout, "skipped.\n\n");
     } else {
-        int num_tests = 5;
+        int num_tests = 8;
         char *performance_test_names[num_tests];
         double performance_test_results[num_tests][2];
 
-        performance_test_names [0] = "tiny 2 solutions (4-2.txt)";
+        performance_test_names [0] = "4-2 (2 solutions)";
         performance_test_results[0][0] = measure_and_assert_solve_constraints("examples/exact_cover/4-2.txt", 1000, 2, false);
         performance_test_results[0][1] = measure_and_assert_solve_constraints("examples/exact_cover/4-2.txt", 1000, 2, true);
         
-        performance_test_names[1] = "easy 118 solutions (30-10.txt)";
+        performance_test_names[1] = "30-10 (118 solutions)";
         performance_test_results[1][0] = measure_and_assert_solve_constraints("examples/exact_cover/30-10.txt", 1000, 118, false);
         performance_test_results[1][1] = measure_and_assert_solve_constraints("examples/exact_cover/30-10.txt", 1000, 118, true);
-
-        performance_test_names[2] = "easy 0 solutions (300-100.txt)";
-        performance_test_results[2][0] = measure_and_assert_solve_constraints("examples/exact_cover/300-100.txt", 1000, 0, false);
-        performance_test_results[2][1] = measure_and_assert_solve_constraints("examples/exact_cover/300-100.txt", 1000, 0, true);
-        
-        performance_test_names[3] = "easy 0 solutions (300-100.txt)";
-        performance_test_results[3][0] = measure_and_assert_solve_constraints("examples/exact_cover/300-100.txt", 1000, 0, false);
-        performance_test_results[3][1] = measure_and_assert_solve_constraints("examples/exact_cover/300-100.txt", 1000, 0, true);
        
-        performance_test_names[4] = "easy 0 solutions (3000-1000.txt)";
-        performance_test_results[4][0] = measure_and_assert_solve_constraints("examples/exact_cover/3000-1000.txt", 1000, 1, false);
-        performance_test_results[4][1] = measure_and_assert_solve_constraints("examples/exact_cover/3000-1000.txt", 1000, 1, true);
+        performance_test_names[2] = "empty_4x4_sudoku (288 solutions)";
+        performance_test_results[2][0] = measure_and_assert_solve_constraints("examples/exact_cover/empty_4x4_sudoku.txt", 1000, 288, false);
+        performance_test_results[2][1] = measure_and_assert_solve_constraints("examples/exact_cover/empty_4x4_sudoku.txt", 1000, 288, true);
+
+        performance_test_names[3] = "empty_9x9_sudoku (1000+ solutions)";
+        performance_test_results[3][0] = measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 1000, -1, false);
+        performance_test_results[3][1] = measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 1000, -1, true);
+
+        performance_test_names[4] = "empty_9x9_sudoku (10000+ solutions)";
+        performance_test_results[4][0] = measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 10000, -1, false);
+        performance_test_results[4][1] = measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 10000, -1, true);
+
+        performance_test_names[5] = "empty_9x9_sudoku (100000+ solutions)";
+        performance_test_results[5][0] = 0; // measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 100000, -1, false);
+        performance_test_results[5][1] = measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 100000, -1, true);
+
+        performance_test_names[5] = "empty_9x9_sudoku (1000000+ solutions)";
+        performance_test_results[5][0] = 0; // measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 1000000, -1, false);
+        performance_test_results[5][1] = measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 1000000, -1, true);
+
+        performance_test_names[6] = "empty_9x9_sudoku (2000000+ solutions)";
+        performance_test_results[6][0] = 0; // measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 2000000, -1, false);
+        performance_test_results[6][1] = measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 2000000, -1, true);
+
+        performance_test_names[7] = "empty_9x9_sudoku (3000000+ solutions)";
+        performance_test_results[7][0] = 0; // measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 3000000, -1, false);
+        performance_test_results[7][1] = measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 3000000, -1, true);
 
         fprintf(stdout, "\nTest name                           with DP              without DP        \n");
         for (int i = 0; i < num_tests; i++) {

@@ -77,16 +77,23 @@ bool parse_sudoku(FILE *file, Sudoku *s)
     int size, block_size;
 
     char *endptr;
-    size = strtol(line + 6, &endptr, 10);
-    if (size < 0 || endptr == line || errno != 0 || size == LONG_MIN || size == LONG_MAX) {
-        fprintf(stderr, "\x1b[31m Invalid sudoku size: %d.\x1b[0m\n", size);
+    errno = 0;
+    long size_long = strtol(line + 6, &endptr, 10);
+    if (endptr == line + 6 || errno == ERANGE || size_long < 0 || size_long > INT_MAX) {
+        fprintf(stderr, "\x1b[31m Invalid sudoku size: %ld.\x1b[0m\n", size_long);
         return false;
     }
-    block_size = strtol(endptr + 1, &endptr, 10);
-    if (block_size < 0 || endptr == line || errno != 0 || block_size == LONG_MIN || block_size == LONG_MAX) {
-        fprintf(stderr, "\x1b[31m Invalid block size: %d.\x1b[0m\n", block_size);
+
+    char *block_start = endptr + 1;
+    errno = 0;
+    long block_size_long = strtol(block_start, &endptr, 10);
+    if (endptr == block_start || errno == ERANGE || block_size_long < 0 || block_size_long > INT_MAX) {
+        fprintf(stderr, "\x1b[31m Invalid block size: %ld.\x1b[0m\n", block_size_long);
         return false;
     }
+
+    size = (int)size_long;
+    block_size = (int)block_size_long;
 
     *s = sudoku_create_empty(size, block_size);
     for (int i = 0; i < size; i++) {
@@ -128,7 +135,7 @@ double measure_and_assert_solver(ulong (*F)(Sudoku), const char *filename, ulong
     start = clock();
     solutions = F(s);
     end = clock();
-    if (num_solutions != -1 && solutions != num_solutions) {
+    if (num_solutions != -1UL && solutions != num_solutions) {
         fprintf(stderr, "\x1b[31m Expected %ld solutions but got %ld.\x1b[0m\n", num_solutions, solutions);
     }
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
@@ -203,14 +210,14 @@ bool test_count_solutions()
     return true;
 }
 
-int main(int argc, char *argv[])
+int main()
 {
     bool test_unit        = true;
     bool test_performance = true;
     bool test_generate    = false;
 
     fprintf(stdout, "\n\x1b[36m\x1b[1m========================================\n");
-    fprintf(stdout, "  \x1b[33mSUS — Unit Tests\x1b[36m\n");
+    fprintf(stdout, "  \x1b[33mSUS — Unit and Performance Tests\x1b[36m\n");
     fprintf(stdout, "========================================\x1b[0m\n\n");
 
     fprintf(stdout, "Unit test summary:\n");

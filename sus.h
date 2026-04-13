@@ -52,14 +52,14 @@ Sudoku sus_generate_sudoku(int size, int block_size, int hints);
 
 #include "sudoku.h"
 
-uint8_t** sus_create_sudoku_constraint(int size, int block_size)
+uint8_t** sus_create_empty_sudoku_constraints(int size, int block_size, int *no_constraints, int *no_columns)
 {
-    int rows = size * size * size;
-    int cols = 4 * size * size;
-    uint8_t **sets = malloc(rows * sizeof(uint8_t*));
-    for (int i = 0; i < rows; i++) {
-        sets[i] = malloc(cols * sizeof(uint8_t));
-        for (int j=0; j<cols; j++) sets[i][j] = 0;
+    *no_constraints = size * size * size;
+    *no_columns = 4 * size * size;
+    uint8_t **sets = malloc(*no_constraints * sizeof(uint8_t*));
+    for (int i = 0; i < *no_constraints; i++) {
+        sets[i] = malloc(*no_columns * sizeof(uint8_t));
+        for (int j=0; j<*no_columns; j++) sets[i][j] = 0;
     }
     
     int cell_off  = 0;
@@ -117,26 +117,32 @@ uint8_t** sus_create_sudoku_constraint(int size, int block_size)
     return sets;
 }
 
-int sus_solve_sudoku(Sudoku *s)
+DLXColumn *sus_create_sudoku_constraints(Sudoku s)
 {
-    if (!sudoku_is_valid(*s)) return 0;
+    int no_constraints, no_columns;
+    uint8_t **constraints = sus_create_empty_sudoku_constraints(s.size, s.block_size, &no_constraints, &no_columns);
+    DLXColumn *root = exact_constraints_to_dlx(constraints, no_constraints, no_columns);
 
-    uint8_t **constraints = sus_create_sudoku_constraint(s->size, s->block_size);    
-    DLXColumn *root = exact_constraints_to_dlx(constraints, s->size*s->size*s->size, 4*s->size*s->size);
-    
-    for (int i=0; i<s->size; i++) {
-        for (int j=0; j<s->size; j++) {
-            int val = s->field[i][j];
+    for (int i=0; i<s.size; i++) {
+        for (int j=0; j<s.size; j++) {
+            int val = s.field[i][j];
             if (val == 0) continue;
-            int set_id = i * s->size * s->size + j * s->size + val - 1;
+            int set_id = i * s.size * s.size + j * s.size + val - 1;
             exact_delete_possibility(root, set_id);
         }
     }
 
-    SetCover cover = {0};
-    if (!exact_solve(root, &cover, 1, -1)) return 0;
+    return root;
+}
 
-    for (int k = 0; k < cover.count; k++) {
+int sus_solve_sudoku(Sudoku *s)
+{
+    if (!sudoku_is_valid(*s)) return 0;
+    DLXColumn *root = sus_create_sudoku_constraints(*s);
+    SetCover cover = {0};
+    if (!exact_solve(root, &cover, 1, -1UL)) return 0;
+
+    for (size_t k = 0; k < cover.count; k++) {
         int id = cover.items[k];
 
         int x = id / (s->size * s->size);
@@ -150,24 +156,8 @@ int sus_solve_sudoku(Sudoku *s)
 unsigned long sus_count_solutions_until(Sudoku s, int max_solutions, int dynamic_programming)
 {
     if (!sudoku_is_valid(s)) return 0;
-
-    int no_constraints = s.size * s.size * s.size;
-    int no_columns = 4 * s.size * s.size;
-    uint8_t **constraints = sus_create_sudoku_constraint(s.size, s.block_size);    
-
-    DLXColumn *root = exact_constraints_to_dlx(constraints, no_constraints, no_columns);
-
-    for (int i=0; i<s.size; i++) {
-        for (int j=0; j<s.size; j++) {
-            int val = s.field[i][j];
-            if (val == 0) continue;
-            int set_id = i * s.size * s.size + j * s.size + val - 1;
-            exact_delete_possibility(root, set_id);
-        }
-    }
-
+    DLXColumn *root = sus_create_sudoku_constraints(s);
     exact_create_setcover_hashtable(s.size * s.size);
-    
     SetCover cover = {0};
     if (dynamic_programming) return exact_solve(root, &cover, 0, max_solutions);
     else                     return exact_solve_without_dp(root, &cover, 0, max_solutions);
@@ -190,7 +180,7 @@ Sudoku sus_generate_sudoku(int size, int block_size, int hints)
     int solutions = 0;
     // TODO: rework
     int equal_iterations = 0;
-    while (solutions != 1 && hints > 0 && equal_iterations < 100) {
+    while (solutions != 1UL && hints > 0 && equal_iterations < 100) {
         int x    = pseudo_rand(size);
         int y    = pseudo_rand(size);
         uint8_t val = pseudo_rand(block_size * block_size) + 1;

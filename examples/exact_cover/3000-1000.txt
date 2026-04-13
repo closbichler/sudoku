@@ -1,1 +1,0 @@
-exact_cover 0 0

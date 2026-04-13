@@ -68,7 +68,12 @@ typedef struct {
 
 /* TODO: comment */
 unsigned long exact_solve_constriants(uint8_t **constraints, int num_rows, int num_cols, SetCover *cover, int find_first_solution_only, unsigned long max_solutions);
+
+/* TODO: comment */
 unsigned long exact_solve(DLXColumn *root, SetCover *cover, int find_first_solution_only, unsigned long max_solutions);
+
+/* Helper */
+uint8_t** exact_create_empty_constraint_sets(int num_sets, int set_size);
 
 #endif // EXACT_COVER_H
 
@@ -147,10 +152,20 @@ void free(void *p);
             break;                                    \
         }                                             \
         (da)->count--;                                \
-        for (int jjj=jj; jjj<(da)->count; jjj++) {    \
+        for (size_t jjj=jj; jjj<(da)->count; jjj++) {    \
             (da)->items[jjj] = (da)->items[jjj+1];    \
         }                                             \
     } while (0)
+
+uint8_t** exact_create_empty_constraint_sets(int num_sets, int set_size)
+{
+    uint8_t **constraint_sets = malloc(num_sets * sizeof(uint8_t*));
+    for (int i = 0; i < num_sets; i++) {
+        constraint_sets[i] = malloc(set_size * sizeof(uint8_t));
+        for (int j=0; j<set_size; j++) constraint_sets[i][j] = 0;
+    }
+    return constraint_sets;
+}
 
 DLXColumn* exact_constraints_to_dlx(uint8_t **constraints, int num_rows, int num_cols)
 {
@@ -431,7 +446,7 @@ void exact_store_setcover_solutions(SetCoverHashTable *hashtable, SetCover setco
         hashtable->items[index].key_items = key_items;
     } else {
         SetCoverHashEntry* e = &hashtable->items[index];
-        int list_size = 0;
+        size_t list_size = 0;
         while (e->next != NULL) {
             e = e->next;
             list_size++;
@@ -446,12 +461,12 @@ void exact_store_setcover_solutions(SetCoverHashTable *hashtable, SetCover setco
     }
 }
 
-SetCoverHashTable exact_create_setcover_hashtable(int size) {
+SetCoverHashTable exact_create_setcover_hashtable(size_t size) {
     SetCoverHashTable hashtable = (SetCoverHashTable) {0};
     da_reserve(&hashtable, size);
     hashtable.count = hashtable.capacity;
 
-    for (int i=0; i<hashtable.count; i++) {
+    for (size_t i=0; i<hashtable.count; i++) {
         // NULL-element
         hashtable.items[i] = (SetCoverHashEntry) {
             .hash      = 1,
@@ -503,7 +518,7 @@ unsigned long exact_solve_with_lookup(DLXColumn *root, SetCover *cover, SetCover
         if (sub_solutions > 0 && find_first_solution_only)
             return 1;
 
-        if (max_solutions != -1 && solutions > max_solutions)
+        if (max_solutions != -1UL && solutions > max_solutions)
             return solutions;
 
         exact_store_setcover_solutions(hashtable, *cover, sub_solutions);
