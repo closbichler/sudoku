@@ -27,7 +27,7 @@ void print_performance_row(const char *name, double a, double b, double c)
     if (c == 0) snprintf(s2, sizeof s2, "N/A");
     else        snprintf(s2, sizeof s2, "%.4fs", c);
 
-    int pos1 = 35, pos2 = 65, pos3 = 79;
+    int pos1 = 48, pos2 = 65, pos3 = 79;
     int cur = 0;
 
     fprintf(stdout, "%s ", name);
@@ -461,7 +461,7 @@ fprintf(stdout, "Performance test summary: \n");
         performance_test_results[7][0] = 0; // measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 3000000, -1, false);
         performance_test_results[7][1] = measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 3000000, -1, true);
 
-        fprintf(stdout, "\nTest name                           with DP              without DP        \n");
+        fprintf(stdout, "\nTest name                                        with DP          without DP        \n");
         for (int i = 0; i < num_tests; i++) {
             print_performance_row(performance_test_names[i],
                 performance_test_results[i][0],
