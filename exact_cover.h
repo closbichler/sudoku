@@ -65,12 +65,24 @@ typedef struct {
     unsigned long hit_count;
 } SetCoverHashTable;
 
+typedef struct {
+    int sets;
+    int columns;
+    unsigned long solutions;
+
+    // statistics
+    int preprocessing_removed_duplicates;
+    
+    // hashtable
+    unsigned long hashtable_lookup_count;
+    unsigned long hashtable_hit_count;
+} ExactCoverProblem;
 
 /* TODO: comment */
-unsigned long exact_solve_constriants(uint8_t **constraints, int num_rows, int num_cols, SetCover *cover, int find_first_solution_only, unsigned long max_solutions);
+ExactCoverProblem exact_solve_constriants(uint8_t **constraints, int num_rows, int num_cols, SetCover *cover, int find_first_solution_only, unsigned long max_solutions);
 
 /* TODO: comment */
-unsigned long exact_solve(DLXColumn *root, SetCover *cover, int find_first_solution_only, unsigned long max_solutions);
+ExactCoverProblem exact_solve(DLXColumn *root, SetCover *cover, int find_first_solution_only, unsigned long max_solutions);
 
 /* Helper */
 uint8_t** exact_create_empty_constraint_sets(int num_sets, int set_size);
@@ -480,7 +492,36 @@ SetCoverHashTable exact_create_setcover_hashtable(size_t size) {
     return hashtable;
 }
 
-unsigned long exact_solve_with_lookup(DLXColumn *root, SetCover *cover, SetCoverHashTable *hashtable, int find_first_solution_only, unsigned long max_solutions)
+int remove_duplicate_rows(uint8_t **constraints, int num_rows, int num_cols) 
+{
+    int removed_duplicates = 0;
+
+    for (int i=0; i<num_rows; i++) {
+        for (int j=i+1; j<num_rows; j++) {
+            int is_duplicate = 1;
+            for (int k=0; k<num_cols; k++) {
+                if (constraints[i][k] != constraints[j][k]) {
+                    is_duplicate = 0;
+                    break;
+                }
+            }
+            if (is_duplicate) {
+                for (int r=j; r<num_rows-1; r++) {
+                    for (int c=0; c<num_cols; c++) {
+                        constraints[r][c] = constraints[r+1][c];
+                    }
+                }
+                num_rows--;
+                removed_duplicates++;
+                j--;
+            }
+        }
+    }
+
+    return removed_duplicates;
+}
+
+unsigned long exact_solve_dlx(DLXColumn *root, SetCover *cover, SetCoverHashTable *hashtable, int find_first_solution_only, unsigned long max_solutions)
 {
     if (root->next == root) return 1;
 
@@ -513,7 +554,7 @@ unsigned long exact_solve_with_lookup(DLXColumn *root, SetCover *cover, SetCover
         } while (neighbor != n);
 
         // test solution
-        unsigned long sub_solutions = exact_solve_with_lookup(root, cover, hashtable, find_first_solution_only, max_solutions);
+        unsigned long sub_solutions = exact_solve_dlx(root, cover, hashtable, find_first_solution_only, max_solutions);
         solutions += sub_solutions;
         if (sub_solutions > 0 && find_first_solution_only)
             return 1;
@@ -537,11 +578,25 @@ unsigned long exact_solve_with_lookup(DLXColumn *root, SetCover *cover, SetCover
     return solutions > 0 && find_first_solution_only ? 1 : solutions;
 }
 
-unsigned long exact_solve(DLXColumn *root, SetCover *cover, int find_first_solution_only, unsigned long max_solutions)
+ExactCoverProblem exact_solve(DLXColumn *root, SetCover *cover, int find_first_solution_only, unsigned long max_solutions)
+{
+    SetCoverHashTable hashtable = { .capacity = 0 };
+    unsigned long solutions = exact_solve_dlx(root, cover, &hashtable, find_first_solution_only, max_solutions);
+    return (ExactCoverProblem) {
+        .sets = 0,
+        .columns = 0,
+        .solutions = solutions,
+    
+        .hashtable_lookup_count = hashtable.lookup_count,
+        .hashtable_hit_count = hashtable.hit_count
+    };
+}
+
+ExactCoverProblem exact_solve_with_dp(DLXColumn *root, SetCover *cover, int find_first_solution_only, unsigned long max_solutions)
 {
     SetCoverHashTable hashtable = exact_create_setcover_hashtable(9*9*9);
     
-    unsigned long solutions = exact_solve_with_lookup(root, cover, &hashtable, find_first_solution_only, max_solutions);
+    unsigned long solutions = exact_solve_dlx(root, cover, &hashtable, find_first_solution_only, max_solutions);
 
     #ifdef EXACT_COVER_DEBUG
     fprintf(stdout, "==Hashtable Stats==\n");
@@ -551,25 +606,29 @@ unsigned long exact_solve(DLXColumn *root, SetCover *cover, int find_first_solut
     fprintf(stdout, "hit-rate  %.4f\n", (double)(hashtable.hit_count) / (hashtable.lookup_count == 0 ? 1 : hashtable.lookup_count));
     #endif // EXACT_COVER_DEBUG
 
-    return solutions;
+    return (ExactCoverProblem) {
+        .sets = 0,
+        .columns = 0,
+        .solutions = solutions,
+    
+        .hashtable_lookup_count = hashtable.lookup_count,
+        .hashtable_hit_count = hashtable.hit_count
+    };
 }
 
-unsigned long exact_solve_without_dp(DLXColumn *root, SetCover *cover, int find_first_solution_only, unsigned long max_solutions)
+ExactCoverProblem exact_solve_constraints(uint8_t **constraints, int num_rows, int num_cols, SetCover *cover, int find_first_solution_only, unsigned long max_solutions)
 {
-    SetCoverHashTable hashtable = { .capacity = 0 };
-    return exact_solve_with_lookup(root, cover, &hashtable, find_first_solution_only, max_solutions);
+    int removed_duplicates = remove_duplicate_rows(constraints, num_rows, num_cols);
+    DLXColumn *root = exact_constraints_to_dlx(constraints, num_rows, num_cols);
+    ExactCoverProblem result = exact_solve(root, cover, find_first_solution_only, max_solutions);
+    result.preprocessing_removed_duplicates = removed_duplicates;
+    return result;
 }
 
-unsigned long exact_solve_constraints(uint8_t **constraints, int num_rows, int num_cols, SetCover *cover, int find_first_solution_only, unsigned long max_solutions)
+ExactCoverProblem exact_solve_constraints_with_dp(uint8_t **constraints, int num_rows, int num_cols, SetCover *cover, int find_first_solution_only, unsigned long max_solutions)
 {
     DLXColumn *root = exact_constraints_to_dlx(constraints, num_rows, num_cols);
-    return exact_solve(root, cover, find_first_solution_only, max_solutions);
-}
-
-unsigned long exact_solve_constraints_without_dp(uint8_t **constraints, int num_rows, int num_cols, SetCover *cover, int find_first_solution_only, unsigned long max_solutions)
-{
-    DLXColumn *root = exact_constraints_to_dlx(constraints, num_rows, num_cols);
-    return exact_solve_without_dp(root, cover, find_first_solution_only, max_solutions);
+    return exact_solve_with_dp(root, cover, find_first_solution_only, max_solutions);
 }
 
 #endif // EXACT_COVER_IMPLEMENTED

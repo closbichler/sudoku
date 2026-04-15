@@ -98,7 +98,7 @@ bool parse_constraints(FILE *file, uint8_t ***constraints, long *num_rows, long 
     return true;
 }
 
-double measure_and_assert_solve_constraints(const char *filename, unsigned long max_solutions, unsigned long num_solutions, bool without_dp) 
+double measure_and_assert_solve_constraints(const char *filename, unsigned long max_solutions, unsigned long num_solutions, bool with_dp) 
 {
     FILE *file = fopen(filename, "r");
     if (file == NULL) {
@@ -118,18 +118,18 @@ double measure_and_assert_solve_constraints(const char *filename, unsigned long 
     clock_t start, end;
     double cpu_time_used;
     SetCover cover = {0};
-    unsigned long solutions;
+    ExactCoverProblem result;
 
     start = clock();
-    if (without_dp) {
-        solutions = exact_solve_constraints_without_dp(constraints, rows, cols, &cover, 0, max_solutions);
+    if (with_dp) {
+        result = exact_solve_constraints_with_dp(constraints, rows, cols, &cover, 0, max_solutions);
     } else {
-        solutions = exact_solve_constraints(constraints, rows, cols, &cover, 0, max_solutions);
+        result = exact_solve_constraints(constraints, rows, cols, &cover, 0, max_solutions);
     }
     end = clock();
     
-    if (num_solutions != -1UL && solutions != num_solutions) {
-        fprintf(stderr, "\x1b[31m Expected %ld solutions but got %ld.\x1b[0m\n", num_solutions, solutions);
+    if (num_solutions != -1UL && result.solutions != num_solutions) {
+        fprintf(stderr, "\x1b[31m Expected %ld solutions but got %ld.\x1b[0m\n", num_solutions, result.solutions);
     }
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
     return cpu_time_used;
@@ -295,7 +295,7 @@ bool test_solve_exact_cover_1(SetCover expected_cover)
     SetCover cover = {0};
     
     exact_create_setcover_hashtable(16);
-    int result = exact_solve(root, &cover, true, -1);
+    int result = exact_solve(root, &cover, true, -1).solutions;
     if (result != 1) return false;
     if (!set_covers_equal(expected_cover, cover)) return false;
     return true;
@@ -314,7 +314,7 @@ bool test_solve_exact_cover_2(SetCover expected_cover)
     SetCover cover = {0};
 
     exact_create_setcover_hashtable(16);
-    int result = exact_solve(root, &cover, true, -1);
+    int result = exact_solve(root, &cover, true, -1).solutions;
     if (result != 1) return false;
     if (!set_covers_equal(expected_cover, cover)) return false;
     return true;
@@ -332,7 +332,7 @@ bool test_solve_exact_cover_3(SetCover expected_cover)
     DLXColumn *root = exact_constraints_to_dlx(constraint_sets, 6, 7);
     SetCover cover = {0};
 
-    int result = exact_solve(root, &cover, true, -1);
+    int result = exact_solve(root, &cover, true, -1).solutions;
     if (result != 1) return false;
     if (!set_covers_equal(expected_cover, cover)) return false;
     return true;
@@ -351,7 +351,7 @@ bool test_solve_exact_cover_incomplete(SetCover expected_cover)
     SetCover cover = {0};
 
     exact_create_setcover_hashtable(16);
-    int result = exact_solve(root, &cover, true, -1);
+    int result = exact_solve(root, &cover, true, -1).solutions;
     if (result != 0) return false;
     if (!set_covers_equal(expected_cover, cover)) return false;
     return true;
@@ -446,22 +446,22 @@ fprintf(stdout, "Performance test summary: \n");
         performance_test_results[4][1] = measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 10000, -1, true);
 
         performance_test_names[5] = "empty_9x9_sudoku (100000+ solutions)";
-        performance_test_results[5][0] = 0; // measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 100000, -1, false);
-        performance_test_results[5][1] = measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 100000, -1, true);
+        performance_test_results[5][0] = measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 100000, -1, false);
+        performance_test_results[5][1] = 0; //measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 100000, -1, true);
 
         performance_test_names[5] = "empty_9x9_sudoku (1000000+ solutions)";
-        performance_test_results[5][0] = 0; // measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 1000000, -1, false);
-        performance_test_results[5][1] = measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 1000000, -1, true);
+        performance_test_results[5][0] = measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 1000000, -1, false);
+        performance_test_results[5][1] = 0; // measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 1000000, -1, true);
 
         performance_test_names[6] = "empty_9x9_sudoku (2000000+ solutions)";
-        performance_test_results[6][0] = 0; // measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 2000000, -1, false);
-        performance_test_results[6][1] = measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 2000000, -1, true);
+        performance_test_results[6][0] = measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 2000000, -1, false);
+        performance_test_results[6][1] = 0; //measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 2000000, -1, true);
 
         performance_test_names[7] = "empty_9x9_sudoku (3000000+ solutions)";
         performance_test_results[7][0] = 0; // measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 3000000, -1, false);
-        performance_test_results[7][1] = measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 3000000, -1, true);
+        performance_test_results[7][1] = 0; // measure_and_assert_solve_constraints("examples/exact_cover/empty_9x9_sudoku.txt", 3000000, -1, true);
 
-        fprintf(stdout, "\nTest name                                        with DP          without DP        \n");
+        fprintf(stdout, "\nTest name                                        without DP          with DP        \n");
         for (int i = 0; i < num_tests; i++) {
             print_performance_row(performance_test_names[i],
                 performance_test_results[i][0],

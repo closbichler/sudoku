@@ -76,32 +76,36 @@ int main(int argc, char *argv[]) {
 
     SetCover cover = {0};
     start = clock();
-    unsigned long solutions = exact_solve_constraints_without_dp(constraints, num_rows, num_cols, &cover, false, max_solutions);
+    ExactCoverProblem result = exact_solve_constraints(constraints, num_rows, num_cols, &cover, false, max_solutions);
     end = clock();
     cpu_time = ((double)(end - start)) / CLOCKS_PER_SEC;
 
     if (!diagnostic_output) {
-        printf("%lu\n", solutions);
+        printf("%lu\n", result.solutions);
     } else {
         char parse_time_str[32];
         char cpu_time_str[32];
+        char algo_info_str[256];
         snprintf(parse_time_str, sizeof(parse_time_str), "%.2f s", parse_time);
         snprintf(cpu_time_str, sizeof(cpu_time_str), "%.2f s", cpu_time);
+        snprintf(algo_info_str, sizeof(algo_info_str), "Removed duplicates during preprocessing: %d", result.preprocessing_removed_duplicates);
 
         printf("============================[ Problem Statistics ]=============================\n");
         printf("| %-30s %-16ld %-27s |\n", "Number of sets:", num_rows, "");
         printf("| %-30s %-16ld %-27s |\n", "Number of elements:", num_cols, "");
         printf("| %-30s %-16s %-27s |\n", "Parse time:", parse_time_str, "");
         printf("| %-30s %-16s %-27s |\n", "CPU time:", cpu_time_str, "");
+        printf("============================[      Algorithm     ]=============================\n");
+        printf("| %-75s |\n", algo_info_str);
         printf("===============================================================================\n");
         printf("\n");
 
-        if (solutions == 0)                  printf("NO SOLUTIONS\n");
-        else if (solutions >= max_solutions) printf(">%lu SOLUTIONS (LIMIT REACHED)\n", max_solutions);
-        else                                 printf("%lu SOLUTIONS\n", solutions);
+        if (result.solutions == 0)                  printf("NO SOLUTIONS\n");
+        else if (result.solutions >= max_solutions) printf(">%lu SOLUTIONS (LIMIT REACHED)\n", max_solutions);
+        else                                         printf("%lu SOLUTIONS\n", result.solutions);
     }
     
-    if (print_solution && solutions > 0) {
+    if (print_solution && result.solutions > 0) {
         printf("\nFirst solution:\n");
 
         cover = (SetCover){0};

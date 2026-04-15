@@ -140,7 +140,8 @@ int sus_solve_sudoku(Sudoku *s)
     if (!sudoku_is_valid(*s)) return 0;
     DLXColumn *root = sus_create_sudoku_constraints(*s);
     SetCover cover = {0};
-    if (!exact_solve(root, &cover, 1, -1UL)) return 0;
+    ExactCoverProblem solution = exact_solve(root, &cover, 1, -1UL);
+    if (solution.solutions == 0) return 0;
 
     for (size_t k = 0; k < cover.count; k++) {
         int id = cover.items[k];
@@ -159,8 +160,8 @@ unsigned long sus_count_solutions_until(Sudoku s, int max_solutions, int dynamic
     DLXColumn *root = sus_create_sudoku_constraints(s);
     exact_create_setcover_hashtable(s.size * s.size);
     SetCover cover = {0};
-    if (dynamic_programming) return exact_solve(root, &cover, 0, max_solutions);
-    else                     return exact_solve_without_dp(root, &cover, 0, max_solutions);
+    if (dynamic_programming) return exact_solve_with_dp(root, &cover, 0, max_solutions).solutions;
+    else                     return exact_solve(root, &cover, 0, max_solutions).solutions;
 }
 
 unsigned long sus_count_solutions(Sudoku s)

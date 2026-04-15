@@ -60,8 +60,8 @@ int pseudorandom(int n)
 
 // -- Performance Tests --
 
-ulong count_solutions_without_dp_wrapper(Sudoku s) {
-    return sus_count_solutions_until(s, 10000, 0);
+ulong count_solutions_with_dp_wrapper(Sudoku s) {
+    return sus_count_solutions_until(s, 10000, 1);
 }
 
 bool parse_sudoku(FILE *file, Sudoku *s) 
@@ -264,37 +264,37 @@ int main()
 
         performance_test_names[0] = "wrong";
         performance_test_results[0][0] = measure_and_assert_solver(sus_count_solutions, "examples/sudoku/9x9-wrong.txt", 0);
-        performance_test_results[0][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, "examples/sudoku/9x9-wrong.txt", 0);
+        performance_test_results[0][1] = measure_and_assert_solver(count_solutions_with_dp_wrapper, "examples/sudoku/9x9-wrong.txt", 0);
         performance_test_results[0][2] = measure_and_assert_solver(sudoku_get_solutions, "examples/sudoku/9x9-wrong.txt", 0);
 
         performance_test_names[1] = "easy";
         performance_test_results[1][0] = measure_and_assert_solver(sus_count_solutions, "examples/sudoku/9x9-easy.txt", 1);
-        performance_test_results[1][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, "examples/sudoku/9x9-easy.txt", 1);
+        performance_test_results[1][1] = measure_and_assert_solver(count_solutions_with_dp_wrapper, "examples/sudoku/9x9-easy.txt", 1);
         performance_test_results[1][2] = measure_and_assert_solver(sudoku_get_solutions, "examples/sudoku/9x9-easy.txt", 1);
 
         performance_test_names[2] = "medium";
         performance_test_results[2][0] = measure_and_assert_solver(sus_count_solutions, "examples/sudoku/9x9-medium.txt", 1);
-        performance_test_results[2][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, "examples/sudoku/9x9-medium.txt", 1);
+        performance_test_results[2][1] = measure_and_assert_solver(count_solutions_with_dp_wrapper, "examples/sudoku/9x9-medium.txt", 1);
         performance_test_results[2][2] = measure_and_assert_solver(sudoku_get_solutions, "examples/sudoku/9x9-medium.txt", 1);
 
         performance_test_names[3] = "hard";
         performance_test_results[3][0] = measure_and_assert_solver(sus_count_solutions, "examples/sudoku/9x9-hard.txt", 1);
-        performance_test_results[3][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, "examples/sudoku/9x9-hard.txt", 1);
+        performance_test_results[3][1] = measure_and_assert_solver(count_solutions_with_dp_wrapper, "examples/sudoku/9x9-hard.txt", 1);
         performance_test_results[3][2] = measure_and_assert_solver(sudoku_get_solutions, "examples/sudoku/9x9-hard.txt", 1);
 
         performance_test_names[4] = "very hard";
         performance_test_results[4][0] = measure_and_assert_solver(sus_count_solutions, "examples/sudoku/9x9-very-hard.txt", 1);
-        performance_test_results[4][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, "examples/sudoku/9x9-very-hard.txt", 1);
+        performance_test_results[4][1] = measure_and_assert_solver(count_solutions_with_dp_wrapper, "examples/sudoku/9x9-very-hard.txt", 1);
         performance_test_results[4][2] = 0;// measure_and_assert_solver(sudoku_get_solutions, "examples/sudoku/9x9-very-hard.txt", 1);
 
         performance_test_names[5] = "multiple solutions (2761)";
         performance_test_results[5][0] = measure_and_assert_solver(sus_count_solutions, "examples/sudoku/9x9-multiple-solutions.txt", 2761);
-        performance_test_results[5][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, "examples/sudoku/9x9-multiple-solutions.txt", 2761);
+        performance_test_results[5][1] = measure_and_assert_solver(count_solutions_with_dp_wrapper, "examples/sudoku/9x9-multiple-solutions.txt", 2761);
         performance_test_results[5][2] = 0; // measure_and_assert_solver(sudoku_get_solutions, "examples/sudoku/9x9-multiple-solutions.txt", 2761);
 
         performance_test_names[6] = "even more solutions (>100.000)";
         performance_test_results[6][0] = measure_and_assert_solver(sus_count_solutions, "examples/sudoku/9x9-a-lot-solutions.txt", -1);
-        performance_test_results[6][1] = measure_and_assert_solver(count_solutions_without_dp_wrapper, "examples/sudoku/9x9-a-lot-solutions.txt", -1);
+        performance_test_results[6][1] = measure_and_assert_solver(count_solutions_with_dp_wrapper, "examples/sudoku/9x9-a-lot-solutions.txt", -1);
         performance_test_results[6][2] = 0; // measure_and_assert_solver(sudoku_get_solutions, "examples/sudoku/9x9-a-lot-solutions.txt", 2761);
 
         fprintf(stdout, "\nTest name                           SUS                  SUS (no DP)        Brute Force\n");
