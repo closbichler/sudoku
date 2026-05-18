@@ -17,10 +17,12 @@ make test
 The implementation contains one simple recursive greedy algorithm and a reduction from sudoku to the exact cover problem as described by Donald Knuth (also called _Algorithm X_).
 
 ## TODO
-- free sudoku resources (currently leaking everything)
+- review memory usage, malloc/free
 - sudoku generation
-- refactor hashing
-    - Hash quality is weak: HASH_CONST is 2 at exact_cover.h:56, which increases collisions and lowers lookup efficiency.
+- improve Exact Cover:
+    - refactor hashtables; Hash quality is weak and not canonical
+    - refactor SetCover struct: don't use heap at all
+    - add parallelism for first few branches
 - actually usable UI
 
 ## Resources
