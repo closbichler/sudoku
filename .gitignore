@@ -1,7 +1,9 @@
 ./sudoku
 .vscode/
 sudoku_test
+sudoku_cli
 exact_cover_test
+exact_cover_cli
 *.wasm
 *.o
 *.su
